@@ -398,7 +398,7 @@ let dragOriginIdx = null;
 let dragAvatar = null;
 let turnTimerId = null;
 let turnTimerRemaining = 0;
-const TURN_TIME = 70;
+const TURN_TIME = 49;
 
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;

@@ -36,7 +36,7 @@ button,
 main#app {
   width: 100vw;
   height: 100vh;
-  padding: 24px;
+  padding: 0;
   display: flex;
   align-items: stretch;
   justify-content: flex-start;
@@ -132,11 +132,14 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .title-buttons {
   position: fixed;
   right: 28px;
+  left: auto;
   bottom: 28px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 18px;
   width: 260px;
-  justify-items: stretch;
+  justify-content: flex-start;
+  align-items: stretch;
   z-index: 50;
 }
 #record-screen.panel {
