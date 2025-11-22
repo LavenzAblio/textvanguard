@@ -38,7 +38,7 @@ main#app {
   height: 100vh;
   padding: 0;
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: flex-start;
   position: relative;
 }
@@ -68,7 +68,7 @@ main#app {
   padding: 48px 52px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 #title-screen.panel {
@@ -202,7 +202,7 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 .top-band {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.2fr;
+  grid-template-columns: 1fr 1fr 1.2fr 1.6fr;
   gap: 18px;
   align-items: stretch;
 }

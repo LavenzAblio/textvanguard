@@ -8,18 +8,18 @@
 </head>
 <body>
   <main id="app">
+    <div class="title-actions">
+      <div class="title-buttons">
+        <button id="story-btn" class="primary">스토리 모드</button>
+        <button id="endless-btn" class="primary">무한 모드</button>
+        <button id="record-btn">무한 모드 기록</button>
+      </div>
+    </div>
     <section id="title-screen" class="panel screen active">
       <div class="title-hero">
         <div class="title-text">
           <h1>텍스트 뱅가드</h1>
           <p class="version">Ver. 0.11</p>
-        </div>
-        <div class="title-actions">
-          <div class="title-buttons">
-            <button id="story-btn" class="primary">스토리 모드</button>
-            <button id="endless-btn" class="primary">무한 모드</button>
-            <button id="record-btn">무한 모드 기록</button>
-          </div>
         </div>
       </div>
     </section>
@@ -76,18 +76,6 @@
             </div>
             <div id="gate" class="card-stack scroll"></div>
           </div>
-        </div>
-
-        <div class="footer-row">
-          <div class="footer-info">
-            <span id="card-count">보유 중인 카드 수 0</span>
-          </div>
-          <div class="button-row">
-            <button data-action="to-title">항복</button>
-          </div>
-        </div>
-
-        <div class="play-row">
           <div class="board-column">
             <div id="entity-inline" class="entity-inline"></div>
             <div class="board" aria-label="3x3 전장" id="board"></div>
@@ -99,6 +87,15 @@
               <button id="end-turn-btn" class="accent wide">턴 끝내기</button>
             </div>
             <div id="inspect-panel" class="inspect-panel hidden"></div>
+          </div>
+        </div>
+
+        <div class="footer-row">
+          <div class="footer-info">
+            <span id="card-count">보유 중인 카드 수 0</span>
+          </div>
+          <div class="button-row">
+            <button data-action="to-title">항복</button>
           </div>
         </div>
       </div>
