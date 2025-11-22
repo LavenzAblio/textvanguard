@@ -3,22 +3,269 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
 const nameFragments = [
-  "기", "르", "크", "마", "빈", "터", "빅", "워", "일", "리", "아", "어", "이", "렐", "비", "루", "로", "라", "메",
-  "모", "몰", "바", "칸", "켄", "세", "스", "탄", "벨", "말", "파", "트", "겐", "즈", "조", "얼", "슈", "멘", "타",
-  "커", "소", "수", "키", "페", "무", "벡", "잔", "슨", "센", "자", "지", "보", "레", "넌", "리엘", "론", "릴", "렘",
-  "렌", "링", "로스", "룬", "라크", "라스", "로크", "루크", "람", "란", "리안", "레온", "로안", "리스", "로드", "라일",
-  "랑", "렉", "르크", "룩", "렉스", "르스", "린", "렌", "림", "룸", "렁", "발", "벅", "벱", "벡", "브렌", "봄",
-  "볼", "반", "벼", "벽", "바스", "브락", "브롤", "백스", "보르", "벤", "베온", "비엘", "보안", "브락스", "브론",
-  "브릭", "브렉", "빈트", "빌", "벨", "벨크", "잔", "젠", "족", "제르", "조안", "증", "진스", "젤", "조크", "줄",
-  "존", "젠트", "족스", "잘", "즈렌", "제바", "제온", "제프", "조알", "칸", "켄", "켈", "킨", "킥", "크스", "캘",
-  "캔", "케프", "코르", "콜", "콕", "콩", "칼", "카브", "컥", "큼", "쿠르", "켄트", "칵", "켁", "켐", "콘",
-  "케온", "콘스", "콕스", "콘트", "탈", "텐", "톤", "틸", "틱", "트스", "텔", "테프", "톡", "톨", "톤스", "타르",
-  "토브", "티엔", "택스", "타크", "텐트", "톨크", "타브", "파", "펜", "폴", "픽", "프렌", "판", "팔", "포르",
-  "패스", "포익", "폴트", "팩스", "팜", "프릴", "포안", "프록", "멘", "먼", "멜", "몬", "몰", "맥", "맨", "맘",
-  "믄", "멘스", "멜크", "멘트", "슈", "실", "셀", "숀", "숀트", "속", "스크", "스텔", "스탄", "스록", "스몬",
-  "스브", "스렌", "스톤", "커", "켠", "켜", "케르", "코스", "컽", "케온", "컬크", "켈트", "커브", "컨트", "케브",
-  "콘트", "쿠스", "겔", "겐", "글", "고르", "그렌", "그렉", "골트", "그란", "델", "던", "돌", "닐", "님", "넨",
-  "넬", "닉", "네프", "논", "넥스", "낙", "낟", "낚", "워", "위엘", "윈", "웬", "웰", "원", "웅", "웁", "웁스",
+  "기",
+  "르",
+  "크",
+  "마",
+  "빈",
+  "터",
+  "빅",
+  "워",
+  "일",
+  "리",
+  "아",
+  "어",
+  "이",
+  "렐",
+  "비",
+  "루",
+  "로",
+  "라",
+  "메",
+  "모",
+  "몰",
+  "바",
+  "칸",
+  "켄",
+  "세",
+  "스",
+  "탄",
+  "벨",
+  "말",
+  "파",
+  "트",
+  "겐",
+  "즈",
+  "조",
+  "얼",
+  "슈",
+  "멘",
+  "타",
+  "커",
+  "소",
+  "수",
+  "키",
+  "페",
+  "무",
+  "벡",
+  "잔",
+  "슨",
+  "센",
+  "자",
+  "지",
+  "보",
+  "레",
+  "넌",
+  "리엘",
+  "론",
+  "릴",
+  "렘",
+  "렌",
+  "링",
+  "로스",
+  "룬",
+  "라크",
+  "라스",
+  "로크",
+  "루크",
+  "람",
+  "란",
+  "리안",
+  "레온",
+  "로안",
+  "리스",
+  "로드",
+  "라일",
+  "랑",
+  "렉",
+  "르크",
+  "룩",
+  "렉스",
+  "르스",
+  "린",
+  "렌",
+  "림",
+  "룸",
+  "렁",
+  "발",
+  "벅",
+  "벱",
+  "벡",
+  "브렌",
+  "봄",
+  "볼",
+  "반",
+  "벼",
+  "벽",
+  "바스",
+  "브락",
+  "브롤",
+  "백스",
+  "보르",
+  "벤",
+  "베온",
+  "비엘",
+  "보안",
+  "브락스",
+  "브론",
+  "브릭",
+  "브렉",
+  "빈트",
+  "빌",
+  "벨",
+  "벨크",
+  "잔",
+  "젠",
+  "족",
+  "제르",
+  "조안",
+  "증",
+  "진스",
+  "젤",
+  "조크",
+  "줄",
+  "존",
+  "젠트",
+  "족스",
+  "잘",
+  "즈렌",
+  "제바",
+  "제온",
+  "제프",
+  "조알",
+  "칸",
+  "켄",
+  "켈",
+  "킨",
+  "킥",
+  "크스",
+  "캘",
+  "캔",
+  "케프",
+  "코르",
+  "콜",
+  "콕",
+  "콩",
+  "칼",
+  "카브",
+  "컥",
+  "큼",
+  "쿠르",
+  "켄트",
+  "칵",
+  "켁",
+  "켐",
+  "콘",
+  "케온",
+  "콘스",
+  "콕스",
+  "콘트",
+  "탈",
+  "텐",
+  "톤",
+  "틸",
+  "틱",
+  "트스",
+  "텔",
+  "테프",
+  "톡",
+  "톨",
+  "톤스",
+  "타르",
+  "토브",
+  "티엔",
+  "택스",
+  "타크",
+  "텐트",
+  "톨크",
+  "타브",
+  "파",
+  "펜",
+  "폴",
+  "픽",
+  "프렌",
+  "판",
+  "팔",
+  "포르",
+  "패스",
+  "포익",
+  "폴트",
+  "팩스",
+  "팜",
+  "프릴",
+  "포안",
+  "프록",
+  "멘",
+  "먼",
+  "멜",
+  "몬",
+  "몰",
+  "맥",
+  "맨",
+  "맘",
+  "믄",
+  "멘스",
+  "멜크",
+  "멘트",
+  "슈",
+  "실",
+  "셀",
+  "숀",
+  "숀트",
+  "속",
+  "스크",
+  "스텔",
+  "스탄",
+  "스록",
+  "스몬",
+  "스브",
+  "스렌",
+  "스톤",
+  "커",
+  "켠",
+  "켜",
+  "케르",
+  "코스",
+  "컽",
+  "케온",
+  "컬크",
+  "켈트",
+  "커브",
+  "컨트",
+  "케브",
+  "콘트",
+  "쿠스",
+  "겔",
+  "겐",
+  "글",
+  "고르",
+  "그렌",
+  "그렉",
+  "골트",
+  "그란",
+  "델",
+  "던",
+  "돌",
+  "닐",
+  "님",
+  "넨",
+  "넬",
+  "닉",
+  "네프",
+  "논",
+  "넥스",
+  "낙",
+  "낟",
+  "낚",
+  "워",
+  "위엘",
+  "윈",
+  "웬",
+  "웰",
+  "원",
+  "웅",
+  "웁",
+  "웁스",
 ];
 const tribes = ["인간", "짐승", "기계", "정령", "괴물", "저주"];
 const contractPool = [
@@ -110,7 +357,6 @@ const state = {
   restStage: false,
   board: Array(9).fill(null),
   gate: [],
-  hand: [],
   keywordCards: [],
   contracts: [],
   contractChoices: [],
@@ -121,7 +367,11 @@ const state = {
   turnBuff: { damage: 0, crit: 0, shieldFront: false },
   stageBuff: { damage: 0 },
   entity: null,
+  currentTargets: [],
   nextTargets: [],
+  pendingSpawn: false,
+  selectedKeyword: null,
+  selectedGateCard: null,
   contractEffects: {
     allyDamage: 0,
     allyCrit: 0,
@@ -137,15 +387,23 @@ const state = {
 
 let activeSacrificeButton = null;
 let draggedCard = null;
+let dragOriginIdx = null;
+let dragAvatar = null;
 let turnTimerId = null;
-const TURN_TIME = 16;
+let turnTimerRemaining = 0;
+const TURN_TIME = 28;
 
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function randomName() {
-  const len = rand(2, 4);
+function randomName(type = "ally") {
+  const len =
+    type === "enemy"
+      ? rand(3, 5)
+      : Math.random() < 0.65
+      ? rand(2, 2)
+      : rand(2, 3);
   let name = "";
   for (let i = 0; i < len; i++) name += nameFragments[rand(0, nameFragments.length - 1)];
   return name.slice(0, 7);
@@ -185,7 +443,7 @@ function createVanguard(stage, guaranteedKeyword) {
   const base = 10 + Math.ceil(stage * 0.8);
   const unit = {
     id: crypto.randomUUID(),
-    name: randomName(),
+    name: randomName("ally"),
     tribes: randomTribe(),
     range: rand(1, 3),
     hp: base + rand(-3, 4),
@@ -254,7 +512,6 @@ function createShopCards(forceVanguard = false) {
 function renderShop() {
   $("#shop-layer").classList.remove("hidden");
   $("#shop-money").textContent = `$${state.money}`;
-  $("#overlay-card-count").textContent = state.gate.length + state.hand.length;
   const wrap = $("#shop-cards");
   wrap.innerHTML = "";
   state.shopCards.forEach((card) => wrap.appendChild(renderCard(card, () => buyCard(card))));
@@ -272,7 +529,7 @@ function renderContractChoices() {
     const el = document.createElement("button");
     el.type = "button";
     el.className = "contract-choice";
-    el.innerHTML = `<div class="muted">축복</div><div>${c.name}</div><div class="muted">${c.buff}</div><div>${c.debuff}</div>`;
+    el.innerHTML = `<div class="muted">계약</div><div>${c.name}</div><div class="muted">${c.buff}</div><div>${c.debuff}</div>`;
     el.addEventListener("click", () => chooseContract(c));
     wrap.appendChild(el);
   });
@@ -282,7 +539,6 @@ function openContractModal() {
   state.contractChoices = pickContracts();
   renderContractChoices();
   $("#contract-money").textContent = `$${state.money}`;
-  $("#contract-card-count").textContent = state.gate.length + state.hand.length;
   $("#contract-layer").classList.remove("hidden");
 }
 
@@ -301,26 +557,24 @@ function chooseContract(contract) {
 }
 
 function renderCards(container, cards, onClick, options = {}) {
-  const { compact = false, draggable = false, showButton = true, showCost = true } = options;
+  const { compact = false, draggable = false, showCost = true, selectable = false, selectedId = null } = options;
   container.innerHTML = "";
   cards.forEach((card) => {
-    const display =
-      typeof card === "string"
-        ? { id: card, name: card, type: "keyword", text: "키워드 부여" }
-        : card;
-    container.appendChild(renderCard(display, () => onClick(card), { compact, draggable, showButton, showCost }));
+    const display = typeof card === "string" ? { id: card, name: card, type: "keyword", text: "키워드 부여" } : card;
+    const selected = selectedId && display.id === selectedId;
+    container.appendChild(renderCard(display, () => onClick?.(card), { compact, draggable, showCost, selectable, selected }));
   });
 }
 
 function renderCard(card, onClick, options = {}) {
-  const { compact = false, draggable = false, showButton = true, showCost = true } = options;
+  const { compact = false, draggable = false, showCost = true, selectable = false, selected = false } = options;
   const el = document.createElement("article");
-  el.className = `card ${compact ? "mini" : ""}`;
+  el.className = `card ${compact ? "mini" : ""} ${selected ? "rest-selected" : ""}`;
   const shownCost = card.type === "tactic" ? getTacticCost(card) : card.cost;
   const label = card.type === "tactic" ? "택틱" : card.type === "keyword" ? "키워드" : `${card.role} · 사거리 ${card.range}`;
 
   el.innerHTML = `
-    ${showCost ? `<div class="cost">$${shownCost}</div>` : ""}
+    ${showCost && card.cost ? `<div class="cost">$${shownCost}</div>` : ""}
     <h4>${card.name}</h4>
     <div class="muted">${label}</div>
     ${card.tribes ? `<div class="row"><span class="stat">종족: ${card.tribes.join(", ")}</span></div>` : ""}
@@ -335,32 +589,99 @@ function renderCard(card, onClick, options = {}) {
     <div class="row">${(card.keywords || []).map((k) => `<span class="keyword">${k}</span>`).join("")}</div>
   `;
 
-  if (showButton) {
-    const btn = document.createElement("button");
-    btn.textContent = card.type === "tactic" ? "사용" : "배치";
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      onClick(card);
-    });
-    el.appendChild(btn);
-  }
+  el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (selectable) {
+      onClick?.(card);
+      return;
+    }
+    if (card.type === "tactic") onClick?.(card);
+  });
+
+  el.addEventListener("pointerdown", (e) => {
+    if (card.type === "tactic" || !draggable) return;
+    e.preventDefault();
+    startCardDrag(card);
+  });
 
   el.addEventListener("mouseenter", () => showInspect(card));
   el.addEventListener("mouseleave", hideInspect);
 
-  if (draggable) {
-    el.setAttribute("draggable", "true");
-    el.addEventListener("dragstart", () => {
-      draggedCard = card;
-      document.body.classList.add("dragging-card");
-    });
-    el.addEventListener("dragend", () => {
-      draggedCard = null;
-      document.body.classList.remove("dragging-card");
-    });
-  }
-
   return el;
+}
+
+function createFloatingAvatar(text) {
+  const ghost = document.createElement("div");
+  ghost.className = "floating-card";
+  ghost.textContent = text;
+  document.body.appendChild(ghost);
+  return ghost;
+}
+
+function clearDropTargets() {
+  $$(".cell").forEach((c) => c.classList.remove("drop-target"));
+}
+
+function isAdjacent(a, b) {
+  const rowDiff = Math.abs(Math.floor(a / 3) - Math.floor(b / 3));
+  const colDiff = Math.abs((a % 3) - (b % 3));
+  return rowDiff + colDiff === 1;
+}
+
+function getDropIndex(event) {
+  const target = document.elementFromPoint(event.clientX, event.clientY);
+  const cell = target?.closest?.(".cell");
+  return cell ? Number(cell.dataset.idx) : null;
+}
+
+function handlePointerMove(e) {
+  if (!dragAvatar) return;
+  dragAvatar.style.left = `${e.clientX}px`;
+  dragAvatar.style.top = `${e.clientY}px`;
+  clearDropTargets();
+  const idx = getDropIndex(e);
+  if (idx == null) return;
+  if (dragOriginIdx == null || isAdjacent(dragOriginIdx, idx)) {
+    const cell = $(`.cell[data-idx='${idx}']`);
+    if (cell) cell.classList.add("drop-target");
+  }
+}
+
+function cleanupDrag() {
+  clearDropTargets();
+  document.removeEventListener("pointermove", handlePointerMove);
+  document.removeEventListener("pointerup", handlePointerUp);
+  if (dragAvatar) dragAvatar.remove();
+  dragAvatar = null;
+  draggedCard = null;
+  dragOriginIdx = null;
+}
+
+function handlePointerUp(e) {
+  const idx = getDropIndex(e);
+  if (draggedCard && dragOriginIdx == null && idx != null) {
+    placeFromGate(draggedCard, idx);
+  }
+  if (draggedCard && dragOriginIdx != null && idx != null) {
+    moveUnitTo(dragOriginIdx, idx);
+  }
+  cleanupDrag();
+}
+
+function startCardDrag(card) {
+  draggedCard = card;
+  dragOriginIdx = null;
+  dragAvatar = createFloatingAvatar(card.name);
+  document.addEventListener("pointermove", handlePointerMove);
+  document.addEventListener("pointerup", handlePointerUp);
+}
+
+function startUnitDrag(idx) {
+  dragOriginIdx = idx;
+  draggedCard = state.board[idx];
+  dragAvatar = createFloatingAvatar(draggedCard.name);
+  document.addEventListener("pointermove", handlePointerMove);
+  document.addEventListener("pointerup", handlePointerUp);
 }
 
 function log(msg) {
@@ -377,7 +698,6 @@ function resetState(mode) {
     restStage: false,
     board: Array(9).fill(null),
     gate: [],
-    hand: [],
     keywordCards: [],
     contracts: [],
     contractChoices: [],
@@ -385,7 +705,11 @@ function resetState(mode) {
     rerollCost: 5,
     log: [],
     entity: null,
+    currentTargets: [],
     nextTargets: [],
+    pendingSpawn: true,
+    selectedKeyword: null,
+    selectedGateCard: null,
     turnBuff: { damage: 0, crit: 0, shieldFront: false },
     stageBuff: { damage: 0 },
     contractEffects: {
@@ -402,7 +726,6 @@ function resetState(mode) {
   });
   log(`${mode} 시작! 소환으로 첫 뱅가드를 확보하세요.`);
   summon(true);
-  resetTurnTimer();
   render();
 }
 
@@ -415,19 +738,12 @@ function renderBoard() {
     cell.dataset.idx = idx;
     cell.innerHTML = unit
       ? `<div><strong>${unit.name}</strong><div class="muted">${unit.hp}/${unit.maxHp}</div></div><span class="tag">${unit.role}</span>`
-      : "<span class=\"muted\">빈 칸</span>";
+      : "";
     cell.addEventListener("click", (e) => onCellClick(e, cell, idx));
-    cell.addEventListener("dblclick", () => moveUnit(idx));
-    cell.addEventListener("dragover", (e) => {
-      if (!draggedCard) return;
-      e.preventDefault();
+    cell.addEventListener("pointerdown", () => {
+      if (unit) startUnitDrag(idx);
     });
-    cell.addEventListener("drop", (e) => {
-      if (!draggedCard) return;
-      e.preventDefault();
-      placeFromGate(draggedCard, idx);
-    });
-    cell.addEventListener("mouseenter", () => showInspect(unit || { name: "빈 칸" }));
+    cell.addEventListener("mouseenter", () => showInspect(unit || null));
     cell.addEventListener("mouseleave", hideInspect);
     boardEl.appendChild(cell);
   });
@@ -437,9 +753,7 @@ function render() {
   $("#money-label").textContent = `$${state.money}`;
   $("#shop-money").textContent = `$${state.money}`;
   $("#contract-money").textContent = `$${state.money}`;
-  $("#card-count").textContent = `보유 중인 카드 수 ${state.gate.length + state.hand.length}`;
-  $("#overlay-card-count").textContent = state.gate.length + state.hand.length;
-  $("#contract-card-count").textContent = state.gate.length + state.hand.length;
+  $("#card-count").textContent = `보유 중인 카드 수 ${state.gate.length}`;
 
   const typeEl = $("#stage-type");
   const stageCircle = $("#stage-number");
@@ -454,13 +768,10 @@ function render() {
   } else {
     typeEl.textContent = "일반";
   }
-  $("#cycle-label").textContent = state.restStage ? "재정비 스테이지" : `사이클 ${state.cyclesCompleted + 1}`;
 
   renderStageTrack();
   renderBoard();
   renderGate();
-  renderCards($("#hand"), state.hand, (card) => playTactic(card), { compact: true });
-  renderCards($("#keyword-cards"), state.keywordCards, (card) => applyKeyword(card), { compact: true, showCost: false });
   renderContracts();
   renderEntityPanel();
   renderAttackPreview();
@@ -518,7 +829,15 @@ function renderStageTrack() {
 }
 
 function renderGate() {
-  renderCards($("#gate"), state.gate, (card) => placeFromGate(card), { draggable: true });
+  renderCards(
+    $("#gate"),
+    state.gate,
+    (card) => {
+      if (card.type === "tactic") return playTactic(card);
+      return null;
+    },
+    { draggable: true }
+  );
 }
 
 function renderEntityPanel() {
@@ -557,18 +876,34 @@ function pickTargets() {
   return result;
 }
 
+function refreshTargets() {
+  if (!state.entity) return;
+  state.currentTargets = pickTargets();
+  state.nextTargets = pickTargets();
+  renderAttackPreview();
+}
+
 function renderAttackPreview() {
-  const grid = $("#attack-preview-grid");
-  if (!grid) return;
-  const preview = state.entity ? pickTargets() : [];
-  if (state.entity) state.nextTargets = preview;
-  grid.innerHTML = "";
-  for (let i = 0; i < 9; i++) {
-    const cell = document.createElement("div");
-    cell.className = "mini-cell";
-    if (preview.includes(i)) cell.classList.add("target");
-    grid.appendChild(cell);
-  }
+  const nowGrid = $("#attack-now");
+  const nextGrid = $("#attack-next");
+  if (!nowGrid || !nextGrid) return;
+  if (state.entity && state.currentTargets.length === 0) state.currentTargets = pickTargets();
+  if (state.entity && state.nextTargets.length === 0) state.nextTargets = pickTargets();
+  const now = state.entity ? state.currentTargets : [];
+  const next = state.entity ? state.nextTargets : [];
+  [nowGrid, nextGrid].forEach((grid, idx) => {
+    const list = idx === 0 ? now : next;
+    grid.innerHTML = "";
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement("div");
+      cell.className = "mini-cell";
+      if (list.includes(i)) {
+        cell.classList.add("target");
+        if (idx === 0) cell.classList.add("pulse");
+      }
+      grid.appendChild(cell);
+    }
+  });
 }
 
 function showCellEffect(idx, text, tone = "hit") {
@@ -595,13 +930,16 @@ function showEntityEffect(text) {
 function resetTurnTimer() {
   clearInterval(turnTimerId);
   const bar = $("#turn-timer");
-  if (!bar) return;
-  let remaining = TURN_TIME;
+  if (!bar || state.restStage || !state.entity) return;
+  turnTimerRemaining = TURN_TIME;
   bar.style.width = "100%";
   turnTimerId = setInterval(() => {
-    remaining -= 1;
-    bar.style.width = `${Math.max(0, (remaining / TURN_TIME) * 100)}%`;
-    if (remaining <= 0) clearInterval(turnTimerId);
+    turnTimerRemaining -= 1;
+    bar.style.width = `${Math.max(0, (turnTimerRemaining / TURN_TIME) * 100)}%`;
+    if (turnTimerRemaining <= 0) {
+      clearInterval(turnTimerId);
+      endTurn();
+    }
   }, 1000);
 }
 
@@ -612,7 +950,7 @@ function renderContracts() {
   if (state.contracts.length === 0) {
     const empty = document.createElement("div");
     empty.className = "muted";
-    empty.textContent = "선택된 축복이 없습니다.";
+    empty.textContent = "선택된 계약이 없습니다.";
     wrap.appendChild(empty);
     return;
   }
@@ -624,11 +962,52 @@ function renderContracts() {
   });
 }
 
+function renderRestLayer() {
+  const keywordObjs = state.keywordCards.map((k) => ({ id: k, name: k, type: "keyword" }));
+  renderCards($("#rest-keywords"), keywordObjs, (card) => {
+    state.selectedKeyword = card.id;
+    renderRestLayer();
+  }, { selectable: true, showCost: false, selectedId: state.selectedKeyword });
+
+  const gateCards = state.gate.filter((c) => c.type !== "tactic");
+  renderCards($("#rest-gate"), gateCards, (card) => {
+    state.selectedGateCard = card;
+    renderRestLayer();
+  }, { selectable: true, showCost: false, selectedId: state.selectedGateCard?.id });
+}
+
+function openRestLayer() {
+  clearInterval(turnTimerId);
+  $("#rest-layer").classList.remove("hidden");
+  state.currentTargets = [];
+  state.nextTargets = [];
+  renderAttackPreview();
+  renderRestLayer();
+}
+
+function applySelectedKeyword() {
+  const keyword = state.selectedKeyword;
+  const target = state.gate.find((c) => c.id === state.selectedGateCard?.id);
+  if (!keyword || !target) return;
+  applyKeywordToCard(keyword, target);
+  state.selectedKeyword = null;
+  state.selectedGateCard = null;
+  renderRestLayer();
+}
+
+function finishRestStage() {
+  $("#rest-layer").classList.add("hidden");
+  state.restStage = false;
+  state.selectedKeyword = null;
+  state.selectedGateCard = null;
+  summon();
+  render();
+}
+
 function buyCard(card) {
-  if (state.money < card.cost) return alert("자금이 부족합니다.");
+  if (state.money < card.cost) return;
   state.money -= card.cost;
-  if (card.type === "tactic") state.hand.push(card);
-  else state.gate.push(card);
+  state.gate.push(card);
   state.shopCards = state.shopCards.filter((c) => c.id !== card.id);
   log(`${card.name}을(를) 구매했습니다.`);
   render();
@@ -636,12 +1015,13 @@ function buyCard(card) {
 
 function summon(forceVanguard = false) {
   state.shopCards = createShopCards(forceVanguard);
+  state.pendingSpawn = true;
   renderShop();
 }
 
 function reroll() {
   const cost = getRerollCost();
-  if (state.money < cost) return alert("재소환 비용 부족");
+  if (state.money < cost) return;
   state.money -= cost;
   state.rerollCost = Math.ceil(state.rerollCost * 1.25 + 1);
   summon();
@@ -649,12 +1029,22 @@ function reroll() {
   render();
 }
 
+function closeShopLayer() {
+  $("#shop-layer").classList.add("hidden");
+  if (state.pendingSpawn && !state.restStage) {
+    spawnEntity();
+  }
+  state.pendingSpawn = false;
+  render();
+}
+
 function placeFromGate(card, targetIdx = null) {
   const emptyIndex = targetIdx != null ? targetIdx : state.board.findIndex((c) => !c);
-  if (emptyIndex === -1 || state.board[emptyIndex]) return alert("전장에 배치할 수 없습니다.");
+  if (emptyIndex === -1 || state.board[emptyIndex]) return;
   state.board[emptyIndex] = { ...card, id: crypto.randomUUID() };
   state.gate = state.gate.filter((c) => c.id !== card.id);
   log(`${card.name}을(를) 전장에 배치했습니다.`);
+  refreshTargets();
   render();
 }
 
@@ -692,25 +1082,26 @@ function onCellClick(event, cell, idx) {
   activeSacrificeButton = btn;
 }
 
-function moveUnit(idx) {
-  const neighbors = [idx - 3, idx + 3, idx % 3 !== 0 ? idx - 1 : null, idx % 3 !== 2 ? idx + 1 : null].filter((i) => i >= 0 && i < 9);
-  const target = neighbors.find((i) => !state.board[i]);
-  if (target == null) return alert("인접 칸이 없습니다.");
+function moveUnitTo(fromIdx, targetIdx) {
+  if (targetIdx == null || fromIdx === targetIdx) return;
+  if (!isAdjacent(fromIdx, targetIdx)) return;
   const cost = Math.ceil(2 + Math.floor(state.stage * 0.2) + state.contractEffects.moveCostFlat);
-  if (state.money < cost) return alert("이동 비용 부족");
+  if (state.money < cost) return;
   state.money -= cost;
-  state.board[target] = state.board[idx];
-  state.board[idx] = null;
+  const temp = state.board[targetIdx];
+  state.board[targetIdx] = state.board[fromIdx];
+  state.board[fromIdx] = temp || null;
   log(`뱅가드를 이동했습니다. 비용 $${cost}`);
+  refreshTargets();
   render();
 }
 
 function playTactic(card) {
   const cost = getTacticCost(card);
-  if (state.money < cost) return alert("자금 부족");
+  if (state.money < cost) return;
   state.money -= cost;
   card.effect(state);
-  state.hand = state.hand.filter((c) => c.id !== card.id);
+  state.gate = state.gate.filter((c) => c.id !== card.id);
   log(`택틱 ${card.name} 사용.`);
   render();
 }
@@ -741,13 +1132,12 @@ function damageEntity(stateRef, ratio) {
   if (stateRef.entity.hp <= 0) onEntityDefeated();
 }
 
-function applyKeyword(card) {
-  const unit = state.board.find((u) => u);
-  if (!unit) return alert("전장에 뱅가드가 없습니다.");
-  unit.keywords.push(card);
-  log(`${unit.name}이(가) 키워드 ${card}를 획득.`);
-  state.keywordCards = state.keywordCards.filter((k) => k !== card);
-  render();
+function applyKeywordToCard(keyword, card) {
+  if (!keyword || !card) return;
+  card.keywords = card.keywords || [];
+  card.keywords.push(keyword);
+  state.keywordCards = state.keywordCards.filter((k) => k !== keyword);
+  log(`${card.name}이(가) 키워드 ${keyword}를 획득.`);
 }
 
 function spawnEntity() {
@@ -760,7 +1150,7 @@ function spawnEntity() {
   const sdef = def;
   const threat = isBoss ? 3 + rand(1, 3) : 1 + rand(0, 2);
   state.entity = {
-    name: isBoss && state.stage === 20 ? "아키리히치" : randomName(),
+    name: isBoss && state.stage === 20 ? "아키리히치" : randomName("enemy"),
     boss: isBoss,
     hp: Math.ceil(hp),
     maxHp: Math.ceil(hp),
@@ -772,7 +1162,9 @@ function spawnEntity() {
     keywords: rollKeywords(),
   };
   log(`${state.entity.boss ? "보스" : "엔티티"} ${state.entity.name} 등장! 위협력 ${state.entity.threat}`);
+  state.currentTargets = pickTargets();
   state.nextTargets = pickTargets();
+  state.pendingSpawn = false;
   renderAttackPreview();
   resetTurnTimer();
 }
@@ -797,8 +1189,7 @@ function calculateDamage(unit, entity, idx = 0) {
 
 function entityAttack() {
   if (!state.entity) return;
-  const targets = state.nextTargets.length ? [...state.nextTargets] : pickTargets();
-  state.nextTargets = [];
+  const targets = state.currentTargets.length ? [...state.currentTargets] : pickTargets();
   showEntityEffect("공격");
   targets.forEach((idx) => {
     const unit = state.board[idx];
@@ -816,6 +1207,7 @@ function entityAttack() {
     showCellEffect(idx, `피해량 ${dmg}`);
     if (unit.hp <= 0) handleDeath(idx, unit);
   });
+  state.currentTargets = state.nextTargets.length ? [...state.nextTargets] : pickTargets();
   state.nextTargets = pickTargets();
   renderAttackPreview();
 }
@@ -838,18 +1230,12 @@ function handleDeath(idx, unit) {
   log(`${unit.name}이(가) 처치되었습니다.`);
   state.board[idx] = null;
   showCellEffect(idx, "퇴각");
+  refreshTargets();
 }
 
 function endTurn() {
-  if (!state.entity) {
-    if (state.restStage) {
-      state.restStage = false;
-      log("재정비 완료. 다음 스테이지 시작");
-    }
-    spawnEntity();
-    render();
-    return;
-  }
+  clearInterval(turnTimerId);
+  if (!state.entity) return;
   // player attacks first
   state.board.forEach((unit, idx) => {
     if (!unit) return;
@@ -896,6 +1282,7 @@ function onEntityDefeated() {
   }
   const wasBoss = state.entity.boss;
   state.entity = null;
+  state.currentTargets = [];
   state.nextTargets = [];
   renderAttackPreview();
   if (wasBoss) {
@@ -913,11 +1300,7 @@ function advanceStage() {
     state.stage += 1;
     if (state.cyclesCompleted % 2 === 0) {
       state.restStage = true;
-      log("재정비 스테이지: 키워드를 부여하세요.");
-      state.nextTargets = [];
-      renderAttackPreview();
-      resetTurnTimer();
-      render();
+      openRestLayer();
       return;
     }
   } else {
@@ -925,7 +1308,7 @@ function advanceStage() {
     state.stage += 1;
   }
 
-  spawnEntity();
+  summon();
   render();
 }
 
@@ -964,20 +1347,26 @@ function showTitle() {
   activateScreen("title-screen");
   $("#contract-layer").classList.add("hidden");
   $("#shop-layer").classList.add("hidden");
+  $("#rest-layer").classList.add("hidden");
   clearSacrificeButton();
   hideInspect();
   clearInterval(turnTimerId);
+  state.entity = null;
+  state.pendingSpawn = false;
+  state.restStage = false;
+  state.selectedKeyword = null;
+  state.selectedGateCard = null;
+  state.currentTargets = [];
+  state.nextTargets = [];
 }
 
 $("#story-btn").addEventListener("click", () => {
   resetState("스토리 모드");
-  spawnEntity();
   activateScreen("game-screen");
 });
 
 $("#endless-btn").addEventListener("click", () => {
   resetState("무한 모드");
-  spawnEntity();
   activateScreen("game-screen");
 });
 
@@ -987,10 +1376,8 @@ $("#record-btn").addEventListener("click", () => {
 });
 
 $$('[data-action="to-title"]').forEach((btn) => btn.addEventListener("click", showTitle));
-$("#summon-btn").addEventListener("click", () => summon(true));
-$("#reroll-btn").addEventListener("click", reroll);
 $("#overlay-reroll").addEventListener("click", reroll);
-$("#close-shop").addEventListener("click", () => $("#shop-layer").classList.add("hidden"));
+$("#close-shop").addEventListener("click", closeShopLayer);
 $("#end-turn-btn").addEventListener("click", endTurn);
 $("#skip-contract").addEventListener("click", () => {
   log("계약을 건너뜀");
@@ -998,6 +1385,8 @@ $("#skip-contract").addEventListener("click", () => {
   advanceStage();
   render();
 });
+$("#apply-keyword").addEventListener("click", applySelectedKeyword);
+$("#finish-rest").addEventListener("click", finishRestStage);
 
 document.addEventListener("click", (e) => {
   if (!activeSacrificeButton) return;
