@@ -560,8 +560,9 @@ function createShopCards(forceVanguard = false) {
 function renderShop() {
   $("#shop-layer").classList.remove("hidden");
   $("#shop-money").textContent = `$${state.money}`;
-  renderCards($("#shop-cards"), state.shopCards, (card) => buyCard(card), {
-    disabledIds: state.shopTaken,
+  renderCards($("#shop-cards"), state.shopCards, (card) => toggleShopCard(card), {
+    selectable: true,
+    selectedIds: state.shopTaken,
     clickAny: true,
   });
   const closeBtn = $("#close-shop");
@@ -616,6 +617,7 @@ function renderCards(container, cards, onClick, options = {}) {
     showCost = true,
     selectable = false,
     selectedId = null,
+    selectedIds = null,
     disabledIds = new Set(),
     clickAny = false,
     tacticOnlyClick = false,
@@ -623,7 +625,7 @@ function renderCards(container, cards, onClick, options = {}) {
   container.innerHTML = "";
   cards.forEach((card) => {
     const display = typeof card === "string" ? { id: card, name: card, type: "keyword", text: "키워드 부여" } : card;
-    const selected = selectedId && display.id === selectedId;
+    const selected = (selectedId && display.id === selectedId) || (selectedIds && selectedIds.has(display.id));
     const disabled = disabledIds.has(display.id);
     container.appendChild(
       renderCard(display, () => onClick?.(card), {
@@ -1120,8 +1122,18 @@ function finishRestStage() {
   render();
 }
 
-function buyCard(card) {
-  if (state.shopTaken.has(card.id)) return;
+function toggleShopCard(card) {
+  if (state.shopTaken.has(card.id)) {
+    state.shopTaken.delete(card.id);
+    const idx = state.gate.findIndex((c) => c.id === card.id);
+    if (idx !== -1) state.gate.splice(idx, 1);
+    state.money += card.cost;
+    state.shopPicked = state.shopTaken.size > 0;
+    if (!state.gate.some((c) => c.type === "vanguard")) state.initialVanguardNeeded = true;
+    renderShop();
+    render();
+    return;
+  }
   if (state.money < card.cost) return;
   state.money -= card.cost;
   state.gate.push(card);
@@ -1157,7 +1169,7 @@ function closeShopLayer() {
       .sort((a, b) => a.cost - b.cost)[0];
     if (cheapest && cheapest.cost > state.money) cheapest.cost = Math.max(1, Math.ceil(state.money));
     if (cheapest && state.money >= cheapest.cost) {
-      buyCard(cheapest);
+      toggleShopCard(cheapest);
     } else {
       return;
     }

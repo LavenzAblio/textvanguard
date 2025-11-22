@@ -62,13 +62,14 @@ main#app {
 }
 
 #title-screen.panel {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
 }
 
 #title-screen.panel.screen.active {
-  display: grid;
+  display: flex;
 }
 
 #game-screen.panel {
@@ -108,12 +109,12 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .title-wrap {
   display: grid;
-  grid-template-columns: repeat(2, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   align-items: center;
   justify-items: center;
-  min-height: 80vh;
+  min-height: 90vh;
   gap: 42px;
-  width: min(1200px, 96vw);
+  width: min(1440px, 100vw);
   margin: 0 auto;
   padding: 32px 40px;
   justify-content: center;
