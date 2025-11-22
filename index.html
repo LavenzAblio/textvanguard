@@ -43,59 +43,104 @@
     </section>
 
     <section id="game-screen" class="panel screen">
-      <header class="panel-header">
-        <div class="pill-row">
-          <strong id="mode-label"></strong>
-          <span id="stage-label" class="pill"></span>
-          <span id="cycle-label" class="pill"></span>
-          <span id="money-label" class="pill"></span>
+      <div class="game-shell">
+        <div class="top-band">
+          <div class="contract-panel">
+            <h3>선택된 축복</h3>
+            <div id="active-contracts" class="chip-grid"></div>
+          </div>
+          <div class="stage-hub">
+            <div class="hub-label">현재 스테이지</div>
+            <div id="stage-circle" class="stage-circle">
+              <span id="stage-number">1</span>
+              <div id="stage-type" class="stage-type">일반</div>
+            </div>
+            <div id="stage-track" class="stage-track"></div>
+          </div>
+          <div class="gate-stack">
+            <div class="gate-header">
+              <div>
+                <h3>게이트</h3>
+                <p class="muted">마우스로 드래그해 전장에 배치</p>
+              </div>
+              <div class="resource">현재 돈 <strong id="money-label">$0</strong></div>
+            </div>
+            <div id="gate" class="card-stack scroll"></div>
+          </div>
         </div>
-        <div class="button-row">
-          <button id="summon-btn" class="primary">소환</button>
-          <button id="reroll-btn">재소환</button>
-          <button id="end-turn-btn" class="accent">턴 종료</button>
-          <button data-action="to-title">항복</button>
-        </div>
-      </header>
-      <div class="layout">
-        <section class="board" aria-label="3x3 전장" id="board"></section>
-        <aside class="sidebar">
-          <div class="card-slot">
-            <h3>계약</h3>
-            <div id="contracts" class="card-list compact scroll"></div>
-          </div>
-          <div class="card-slot">
-            <h3>게이트</h3>
-            <div id="gate" class="card-list scroll"></div>
-          </div>
-          <div class="card-slot">
-            <h3>핸드 (턴에 사용할 카드)</h3>
-            <div id="hand" class="card-list scroll"></div>
-          </div>
-          <div class="card-slot">
-            <h3>키워드 부여 카드</h3>
-            <div id="keyword-cards" class="card-list scroll"></div>
-          </div>
-        </aside>
-      </div>
 
-      <section id="shop" class="shop hidden">
-        <header class="panel-header">
-          <h3>소환</h3>
-          <span>현재 자금: <strong id="shop-money"></strong></span>
-          <button id="close-shop">닫기</button>
-        </header>
-        <div id="shop-cards" class="card-list scroll"></div>
-      </section>
+        <div class="play-row">
+          <div class="entity-column">
+            <div id="entity-portrait" class="entity-portrait empty">
+              <div class="placeholder">엔티티 없음</div>
+            </div>
+            <div class="attack-preview">
+              <div class="preview-label">엔티티 공격 범위</div>
+              <div id="attack-preview-grid" class="mini-grid"></div>
+            </div>
+          </div>
+
+          <div class="board-column">
+            <div class="board" aria-label="3x3 전장" id="board"></div>
+            <div id="effect-layer" class="effect-layer"></div>
+            <div class="board-controls">
+              <div class="timer">
+                <div id="turn-timer" class="timer-bar"></div>
+              </div>
+              <button id="end-turn-btn" class="accent wide">턴 끝내기</button>
+            </div>
+            <div id="inspect-panel" class="inspect-panel hidden"></div>
+          </div>
+
+          <aside class="action-column">
+            <div class="card-slot">
+              <h4>핸드</h4>
+              <div id="hand" class="card-list scroll compact"></div>
+            </div>
+            <div class="card-slot">
+              <h4>키워드 카드</h4>
+              <div id="keyword-cards" class="card-list scroll compact"></div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="footer-row">
+          <div class="button-row">
+            <button id="summon-btn" class="primary">소환</button>
+            <button id="reroll-btn">재소환</button>
+            <button data-action="to-title">항복</button>
+          </div>
+          <div class="footer-info">
+            <span id="card-count">보유 중인 카드 수 0</span>
+            <span id="cycle-label"></span>
+          </div>
+        </div>
+      </div>
     </section>
-    <section id="contract-screen" class="modal hidden" role="dialog" aria-modal="true">
-      <div class="modal-content">
-        <header class="panel-header">
-          <h3>보스 계약 선택</h3>
-          <button id="skip-contract">선택하지 않기</button>
+
+    <section id="shop-layer" class="overlay hidden" role="dialog" aria-modal="true">
+      <div class="overlay-surface summon-surface">
+        <header class="overlay-header">
+          <h3>소환</h3>
+          <div class="overlay-meta">현재 스테이지 아이콘 표시</div>
         </header>
-        <p class="muted">강력한 버프와 함께 디버프도 적용됩니다. 한 개를 선택하세요.</p>
-        <div id="contract-choices" class="card-list"></div>
+        <div id="shop-cards" class="shop-row"></div>
+        <div class="overlay-actions">
+          <button id="close-shop">닫기</button>
+          <button id="overlay-reroll" class="primary">재소환</button>
+          <div class="money-box">보유 중인 카드 수 <span id="overlay-card-count">0</span><br />현재 돈 <span id="shop-money">$0</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contract-layer" class="overlay hidden" role="dialog" aria-modal="true">
+      <div class="overlay-surface contract-surface">
+        <h3>축복 선택</h3>
+        <div id="contract-choices" class="contract-list"></div>
+        <div class="overlay-actions">
+          <button id="skip-contract">선택하지 않기</button>
+          <div class="money-box">보유 중인 카드 수 <span id="contract-card-count">0</span><br />현재 돈 <span id="contract-money">$0</span></div>
+        </div>
       </div>
     </section>
   </main>

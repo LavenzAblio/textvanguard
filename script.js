@@ -121,6 +121,7 @@ const state = {
   turnBuff: { damage: 0, crit: 0, shieldFront: false },
   stageBuff: { damage: 0 },
   entity: null,
+  nextTargets: [],
   contractEffects: {
     allyDamage: 0,
     allyCrit: 0,
@@ -135,6 +136,9 @@ const state = {
 };
 
 let activeSacrificeButton = null;
+let draggedCard = null;
+let turnTimerId = null;
+const TURN_TIME = 16;
 
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -248,8 +252,9 @@ function createShopCards(forceVanguard = false) {
 }
 
 function renderShop() {
-  $("#shop").classList.remove("hidden");
+  $("#shop-layer").classList.remove("hidden");
   $("#shop-money").textContent = `$${state.money}`;
+  $("#overlay-card-count").textContent = state.gate.length + state.hand.length;
   const wrap = $("#shop-cards");
   wrap.innerHTML = "";
   state.shopCards.forEach((card) => wrap.appendChild(renderCard(card, () => buyCard(card))));
@@ -264,18 +269,11 @@ function renderContractChoices() {
   const wrap = $("#contract-choices");
   wrap.innerHTML = "";
   state.contractChoices.forEach((c) => {
-    const el = document.createElement("article");
-    el.className = "card";
-    el.innerHTML = `
-      <div class="cost">버프</div>
-      <h4>${c.name}</h4>
-      <p class="muted">${c.buff}</p>
-      <p class="muted">${c.debuff}</p>
-    `;
-    const btn = document.createElement("button");
-    btn.textContent = "체결";
-    btn.addEventListener("click", () => chooseContract(c));
-    el.appendChild(btn);
+    const el = document.createElement("button");
+    el.type = "button";
+    el.className = "contract-choice";
+    el.innerHTML = `<div class="muted">축복</div><div>${c.name}</div><div class="muted">${c.buff}</div><div>${c.debuff}</div>`;
+    el.addEventListener("click", () => chooseContract(c));
     wrap.appendChild(el);
   });
 }
@@ -283,11 +281,13 @@ function renderContractChoices() {
 function openContractModal() {
   state.contractChoices = pickContracts();
   renderContractChoices();
-  $("#contract-screen").classList.remove("hidden");
+  $("#contract-money").textContent = `$${state.money}`;
+  $("#contract-card-count").textContent = state.gate.length + state.hand.length;
+  $("#contract-layer").classList.remove("hidden");
 }
 
 function closeContractModal() {
-  $("#contract-screen").classList.add("hidden");
+  $("#contract-layer").classList.add("hidden");
   state.contractChoices = [];
 }
 
@@ -300,27 +300,29 @@ function chooseContract(contract) {
   render();
 }
 
-function renderCards(container, cards, onClick) {
+function renderCards(container, cards, onClick, options = {}) {
+  const { compact = false, draggable = false, showButton = true, showCost = true } = options;
   container.innerHTML = "";
-  cards.forEach((card) => container.appendChild(renderCard(card, () => onClick(card))));
+  cards.forEach((card) => {
+    const display =
+      typeof card === "string"
+        ? { id: card, name: card, type: "keyword", text: "키워드 부여" }
+        : card;
+    container.appendChild(renderCard(display, () => onClick(card), { compact, draggable, showButton, showCost }));
+  });
 }
 
-function renderCard(card, onClick) {
+function renderCard(card, onClick, options = {}) {
+  const { compact = false, draggable = false, showButton = true, showCost = true } = options;
   const el = document.createElement("article");
-  el.className = "card";
-  const btn = document.createElement("button");
-  btn.textContent = card.type === "tactic" ? "사용" : "배치";
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    onClick(card);
-  });
-
+  el.className = `card ${compact ? "mini" : ""}`;
   const shownCost = card.type === "tactic" ? getTacticCost(card) : card.cost;
+  const label = card.type === "tactic" ? "택틱" : card.type === "keyword" ? "키워드" : `${card.role} · 사거리 ${card.range}`;
 
   el.innerHTML = `
-    <div class="cost">$${shownCost}</div>
+    ${showCost ? `<div class="cost">$${shownCost}</div>` : ""}
     <h4>${card.name}</h4>
-    <div class="muted">${card.type === "tactic" ? "택틱" : `${card.role} · 사거리 ${card.range}`}</div>
+    <div class="muted">${label}</div>
     ${card.tribes ? `<div class="row"><span class="stat">종족: ${card.tribes.join(", ")}</span></div>` : ""}
     ${card.atk !== undefined ? `<div class="row">
       <span class="stat">체력 ${card.hp}/${card.maxHp ?? card.hp}</span>
@@ -332,7 +334,32 @@ function renderCard(card, onClick) {
     ${card.text ? `<p class="muted">${card.text}</p>` : ""}
     <div class="row">${(card.keywords || []).map((k) => `<span class="keyword">${k}</span>`).join("")}</div>
   `;
-  el.appendChild(btn);
+
+  if (showButton) {
+    const btn = document.createElement("button");
+    btn.textContent = card.type === "tactic" ? "사용" : "배치";
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onClick(card);
+    });
+    el.appendChild(btn);
+  }
+
+  el.addEventListener("mouseenter", () => showInspect(card));
+  el.addEventListener("mouseleave", hideInspect);
+
+  if (draggable) {
+    el.setAttribute("draggable", "true");
+    el.addEventListener("dragstart", () => {
+      draggedCard = card;
+      document.body.classList.add("dragging-card");
+    });
+    el.addEventListener("dragend", () => {
+      draggedCard = null;
+      document.body.classList.remove("dragging-card");
+    });
+  }
+
   return el;
 }
 
@@ -358,6 +385,7 @@ function resetState(mode) {
     rerollCost: 5,
     log: [],
     entity: null,
+    nextTargets: [],
     turnBuff: { damage: 0, crit: 0, shieldFront: false },
     stageBuff: { damage: 0 },
     contractEffects: {
@@ -374,6 +402,7 @@ function resetState(mode) {
   });
   log(`${mode} 시작! 소환으로 첫 뱅가드를 확보하세요.`);
   summon(true);
+  resetTurnTimer();
   render();
 }
 
@@ -389,39 +418,209 @@ function renderBoard() {
       : "<span class=\"muted\">빈 칸</span>";
     cell.addEventListener("click", (e) => onCellClick(e, cell, idx));
     cell.addEventListener("dblclick", () => moveUnit(idx));
+    cell.addEventListener("dragover", (e) => {
+      if (!draggedCard) return;
+      e.preventDefault();
+    });
+    cell.addEventListener("drop", (e) => {
+      if (!draggedCard) return;
+      e.preventDefault();
+      placeFromGate(draggedCard, idx);
+    });
+    cell.addEventListener("mouseenter", () => showInspect(unit || { name: "빈 칸" }));
+    cell.addEventListener("mouseleave", hideInspect);
     boardEl.appendChild(cell);
   });
 }
 
 function render() {
   $("#money-label").textContent = `$${state.money}`;
-  const stageText = state.restStage ? `재정비 스테이지 (턴 종료 시 진행)` : `스테이지 ${state.stage}`;
-  $("#stage-label").textContent = stageText;
-  $("#cycle-label").textContent = `사이클 ${state.cyclesCompleted + 1}`;
-  renderBoard();
-  renderCards($("#gate"), state.gate, (card) => placeFromGate(card));
-  renderCards($("#hand"), state.hand, (card) => playTactic(card));
-  renderCards($("#keyword-cards"), state.keywordCards, (card) => applyKeyword(card));
-  renderContracts();
   $("#shop-money").textContent = `$${state.money}`;
+  $("#contract-money").textContent = `$${state.money}`;
+  $("#card-count").textContent = `보유 중인 카드 수 ${state.gate.length + state.hand.length}`;
+  $("#overlay-card-count").textContent = state.gate.length + state.hand.length;
+  $("#contract-card-count").textContent = state.gate.length + state.hand.length;
+
+  const typeEl = $("#stage-type");
+  const stageCircle = $("#stage-number");
+  stageCircle.textContent = state.stage;
+  typeEl.classList.remove("boss", "rest");
+  if (state.restStage) {
+    typeEl.textContent = "재정비";
+    typeEl.classList.add("rest");
+  } else if (state.stageInCycle === 4) {
+    typeEl.textContent = "보스";
+    typeEl.classList.add("boss");
+  } else {
+    typeEl.textContent = "일반";
+  }
+  $("#cycle-label").textContent = state.restStage ? "재정비 스테이지" : `사이클 ${state.cyclesCompleted + 1}`;
+
+  renderStageTrack();
+  renderBoard();
+  renderGate();
+  renderCards($("#hand"), state.hand, (card) => playTactic(card), { compact: true });
+  renderCards($("#keyword-cards"), state.keywordCards, (card) => applyKeyword(card), { compact: true, showCost: false });
+  renderContracts();
+  renderEntityPanel();
+  renderAttackPreview();
+}
+
+function showInspect(target) {
+  const panel = $("#inspect-panel");
+  if (!panel) return;
+  if (!target) {
+    panel.classList.add("hidden");
+    return;
+  }
+  const keywordHtml = (target.keywords || []).map((k) => `<span class="keyword">${k}</span>`).join("");
+  const stats =
+    target.atk !== undefined
+      ? `<div class="row"><span class="stat">체력 ${target.hp ?? target.maxHp}/${target.maxHp ?? target.hp}</span>
+          <span class="stat">물공 ${target.atk}</span>
+          <span class="stat">물방 ${target.def}</span>
+          <span class="stat">특공 ${target.satk}</span>
+          <span class="stat">특방 ${target.sdef}</span></div>`
+      : "";
+  panel.innerHTML = `
+    <strong>${target.name || target.title || target.type}</strong>
+    <div class="muted">${target.type === "tactic" ? "택틱" : target.role ? `${target.role} · 사거리 ${target.range}` : ""}</div>
+    ${target.tribes ? `<div class="row"><span class="stat">종족: ${target.tribes.join(", ")}</span></div>` : ""}
+    ${stats}
+    ${target.text ? `<p class="muted">${target.text}</p>` : ""}
+    <div class="row">${keywordHtml}</div>
+  `;
+  panel.classList.remove("hidden");
+}
+
+function hideInspect() {
+  const panel = $("#inspect-panel");
+  if (panel) panel.classList.add("hidden");
+}
+
+function renderStageTrack() {
+  const wrap = $("#stage-track");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  const nodes = [1, 2, 3, 4];
+  nodes.forEach((n) => {
+    const node = document.createElement("div");
+    node.className = "stage-node";
+    if (n === 4) node.classList.add("boss");
+    if (n === state.stageInCycle) node.classList.add("active");
+    wrap.appendChild(node);
+  });
+  if (state.restStage) {
+    const rest = document.createElement("div");
+    rest.className = "stage-node rest active";
+    wrap.appendChild(rest);
+  }
+}
+
+function renderGate() {
+  renderCards($("#gate"), state.gate, (card) => placeFromGate(card), { draggable: true });
+}
+
+function renderEntityPanel() {
+  const portrait = $("#entity-portrait");
+  if (!portrait) return;
+  portrait.innerHTML = "";
+  if (!state.entity) {
+    portrait.classList.add("empty");
+    const empty = document.createElement("div");
+    empty.className = "placeholder";
+    empty.textContent = "엔티티 없음";
+    portrait.appendChild(empty);
+    return;
+  }
+  portrait.classList.remove("empty");
+  const circle = document.createElement("div");
+  circle.className = "circle ring";
+  circle.textContent = state.entity.name;
+  const meta = document.createElement("div");
+  meta.className = "entity-meta";
+  meta.innerHTML = `HP ${state.entity.hp}/${state.entity.maxHp}<br/>위협력 ${state.entity.threat}`;
+  portrait.appendChild(circle);
+  portrait.appendChild(meta);
+}
+
+function pickTargets() {
+  if (!state.entity) return [];
+  const occupied = state.board.map((u, idx) => (u ? idx : null)).filter((v) => v != null);
+  if (occupied.length === 0) return [];
+  const result = [];
+  const max = Math.min(state.entity.threat, occupied.length);
+  while (result.length < max) {
+    const t = occupied[rand(0, occupied.length - 1)];
+    if (!result.includes(t)) result.push(t);
+  }
+  return result;
+}
+
+function renderAttackPreview() {
+  const grid = $("#attack-preview-grid");
+  if (!grid) return;
+  const preview = state.entity ? pickTargets() : [];
+  if (state.entity) state.nextTargets = preview;
+  grid.innerHTML = "";
+  for (let i = 0; i < 9; i++) {
+    const cell = document.createElement("div");
+    cell.className = "mini-cell";
+    if (preview.includes(i)) cell.classList.add("target");
+    grid.appendChild(cell);
+  }
+}
+
+function showCellEffect(idx, text, tone = "hit") {
+  const cell = $(`#board .cell[data-idx='${idx}']`);
+  if (!cell) return;
+  const eff = document.createElement("div");
+  eff.className = `cell-effect ${tone === "heal" ? "heal" : ""}`;
+  eff.textContent = text;
+  cell.appendChild(eff);
+  setTimeout(() => eff.remove(), 800);
+}
+
+function showEntityEffect(text) {
+  const portrait = $("#entity-portrait");
+  if (!portrait) return;
+  const eff = document.createElement("div");
+  eff.className = "cell-effect";
+  eff.style.inset = "20px";
+  eff.textContent = text;
+  portrait.appendChild(eff);
+  setTimeout(() => eff.remove(), 800);
+}
+
+function resetTurnTimer() {
+  clearInterval(turnTimerId);
+  const bar = $("#turn-timer");
+  if (!bar) return;
+  let remaining = TURN_TIME;
+  bar.style.width = "100%";
+  turnTimerId = setInterval(() => {
+    remaining -= 1;
+    bar.style.width = `${Math.max(0, (remaining / TURN_TIME) * 100)}%`;
+    if (remaining <= 0) clearInterval(turnTimerId);
+  }, 1000);
 }
 
 function renderContracts() {
-  const wrap = $("#contracts");
+  const wrap = $("#active-contracts");
   if (!wrap) return;
   wrap.innerHTML = "";
   if (state.contracts.length === 0) {
     const empty = document.createElement("div");
     empty.className = "muted";
-    empty.textContent = "아직 체결된 계약이 없습니다.";
+    empty.textContent = "선택된 축복이 없습니다.";
     wrap.appendChild(empty);
     return;
   }
   state.contracts.forEach((c) => {
-    const el = document.createElement("article");
-    el.className = "card mini";
-    el.innerHTML = `<h4>${c.name}</h4><p class="muted">${c.buff}</p><p class="muted">${c.debuff}</p>`;
-    wrap.appendChild(el);
+    const chip = document.createElement("div");
+    chip.className = "chip";
+    chip.innerHTML = `<div>${c.name}</div><div class="muted">${c.buff}</div>`;
+    wrap.appendChild(chip);
   });
 }
 
@@ -450,9 +649,9 @@ function reroll() {
   render();
 }
 
-function placeFromGate(card) {
-  const emptyIndex = state.board.findIndex((c) => !c);
-  if (emptyIndex === -1) return alert("전장에 빈 칸이 없습니다.");
+function placeFromGate(card, targetIdx = null) {
+  const emptyIndex = targetIdx != null ? targetIdx : state.board.findIndex((c) => !c);
+  if (emptyIndex === -1 || state.board[emptyIndex]) return alert("전장에 배치할 수 없습니다.");
   state.board[emptyIndex] = { ...card, id: crypto.randomUUID() };
   state.gate = state.gate.filter((c) => c.id !== card.id);
   log(`${card.name}을(를) 전장에 배치했습니다.`);
@@ -522,6 +721,8 @@ function healOne(stateRef, ratio) {
   const heal = Math.ceil(unit.maxHp * ratio);
   unit.hp = Math.min(unit.maxHp, unit.hp + heal);
   log(`${unit.name}이(가) ${heal}만큼 회복.`);
+  const idx = stateRef.board.findIndex((u) => u === unit);
+  if (idx >= 0) showCellEffect(idx, `+${heal}`, "heal");
 }
 
 function buffOne(stateRef, dmg) {
@@ -536,6 +737,7 @@ function damageEntity(stateRef, ratio) {
   const dmg = Math.ceil(stateRef.entity.hp * ratio);
   stateRef.entity.hp -= dmg;
   log(`엔티티에게 ${dmg} 피해.`);
+  showEntityEffect(`-${dmg}`);
   if (stateRef.entity.hp <= 0) onEntityDefeated();
 }
 
@@ -570,6 +772,9 @@ function spawnEntity() {
     keywords: rollKeywords(),
   };
   log(`${state.entity.boss ? "보스" : "엔티티"} ${state.entity.name} 등장! 위협력 ${state.entity.threat}`);
+  state.nextTargets = pickTargets();
+  renderAttackPreview();
+  resetTurnTimer();
 }
 
 function calculateDamage(unit, entity, idx = 0) {
@@ -592,13 +797,9 @@ function calculateDamage(unit, entity, idx = 0) {
 
 function entityAttack() {
   if (!state.entity) return;
-  const targets = [];
-  for (let i = 0; i < state.entity.threat; i++) {
-    const occupied = state.board.map((u, idx) => (u ? idx : null)).filter((v) => v != null);
-    if (occupied.length === 0) break;
-    const t = occupied[rand(0, occupied.length - 1)];
-    targets.push(t);
-  }
+  const targets = state.nextTargets.length ? [...state.nextTargets] : pickTargets();
+  state.nextTargets = [];
+  showEntityEffect("공격");
   targets.forEach((idx) => {
     const unit = state.board[idx];
     if (!unit) return;
@@ -612,8 +813,11 @@ function entityAttack() {
     dmg = Math.max(0, Math.ceil(dmg * Math.max(0, 1 + state.contractEffects.enemyDamageTaken)));
     unit.hp -= dmg;
     log(`${state.entity.name}이(가) ${unit.name}에게 ${dmg} 피해.`);
+    showCellEffect(idx, `피해량 ${dmg}`);
     if (unit.hp <= 0) handleDeath(idx, unit);
   });
+  state.nextTargets = pickTargets();
+  renderAttackPreview();
 }
 
 function handleDeath(idx, unit) {
@@ -633,6 +837,7 @@ function handleDeath(idx, unit) {
   }
   log(`${unit.name}이(가) 처치되었습니다.`);
   state.board[idx] = null;
+  showCellEffect(idx, "퇴각");
 }
 
 function endTurn() {
@@ -651,6 +856,7 @@ function endTurn() {
     const dmg = calculateDamage(unit, state.entity, idx);
     state.entity.hp -= dmg;
     log(`${unit.name} -> ${state.entity.name}: ${dmg} 피해`);
+    showEntityEffect(`-${dmg}`);
   });
 
   if (state.entity.hp <= 0) {
@@ -666,11 +872,14 @@ function endTurn() {
       const heal = 4;
       u.hp = Math.min(u.maxHp, u.hp + heal);
       log(`${u.name}이(가) 회복술사로 ${heal} 회복.`);
+      const idx = state.board.findIndex((item) => item === u);
+      if (idx >= 0) showCellEffect(idx, `+${heal}`, "heal");
     }
     u.tempBonus = 0;
   });
   render();
   checkGameOver();
+  resetTurnTimer();
 }
 
 function onEntityDefeated() {
@@ -678,6 +887,7 @@ function onEntityDefeated() {
   const reward = Math.ceil(rewardBase * state.contractEffects.rewardMult);
   state.money += reward;
   log(`${state.entity.name} 격파! $${reward} 획득.`);
+  showEntityEffect("격파");
   const dropChance = state.entity.boss ? 1 : 0.25;
   if (Math.random() < dropChance) {
     const card = keywordCardsPool[rand(0, keywordCardsPool.length - 1)];
@@ -686,6 +896,8 @@ function onEntityDefeated() {
   }
   const wasBoss = state.entity.boss;
   state.entity = null;
+  state.nextTargets = [];
+  renderAttackPreview();
   if (wasBoss) {
     openContractModal();
     render();
@@ -702,6 +914,9 @@ function advanceStage() {
     if (state.cyclesCompleted % 2 === 0) {
       state.restStage = true;
       log("재정비 스테이지: 키워드를 부여하세요.");
+      state.nextTargets = [];
+      renderAttackPreview();
+      resetTurnTimer();
       render();
       return;
     }
@@ -747,22 +962,22 @@ function activateScreen(id) {
 
 function showTitle() {
   activateScreen("title-screen");
-  $("#contract-screen").classList.add("hidden");
-  $("#shop").classList.add("hidden");
+  $("#contract-layer").classList.add("hidden");
+  $("#shop-layer").classList.add("hidden");
   clearSacrificeButton();
+  hideInspect();
+  clearInterval(turnTimerId);
 }
 
 $("#story-btn").addEventListener("click", () => {
   resetState("스토리 모드");
   spawnEntity();
-  $("#mode-label").textContent = "스토리 모드";
   activateScreen("game-screen");
 });
 
 $("#endless-btn").addEventListener("click", () => {
   resetState("무한 모드");
   spawnEntity();
-  $("#mode-label").textContent = "무한 모드";
   activateScreen("game-screen");
 });
 
@@ -774,7 +989,8 @@ $("#record-btn").addEventListener("click", () => {
 $$('[data-action="to-title"]').forEach((btn) => btn.addEventListener("click", showTitle));
 $("#summon-btn").addEventListener("click", () => summon(true));
 $("#reroll-btn").addEventListener("click", reroll);
-$("#close-shop").addEventListener("click", () => $("#shop").classList.add("hidden"));
+$("#overlay-reroll").addEventListener("click", reroll);
+$("#close-shop").addEventListener("click", () => $("#shop-layer").classList.add("hidden"));
 $("#end-turn-btn").addEventListener("click", endTurn);
 $("#skip-contract").addEventListener("click", () => {
   log("계약을 건너뜀");
@@ -791,6 +1007,4 @@ document.addEventListener("click", (e) => {
   }
 });
 
-renderBoard();
-renderCards($("#gate"), [], () => {});
-renderCards($("#hand"), [], () => {});
+render();
