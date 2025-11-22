@@ -39,7 +39,7 @@ main#app {
   padding: 0;
   display: flex;
   align-items: stretch;
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
 }
 
@@ -188,7 +188,12 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .title-text h1 { font-size: 3.4rem; }
 
 .game-shell { display: flex; flex-direction: column; gap: 16px; height: 100%; }
-.game-shell { max-width: 1500px; margin: 0 auto; padding: 0 28px; }
+.game-shell {
+  width: 100%;
+  max-width: 1500px;
+  margin: 0 0 0 28px;
+  padding: 0 28px 0 0;
+}
 .top-band {
   display: grid;
   grid-template-columns: 0.9fr 1.1fr 1.7fr;
@@ -248,7 +253,13 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .gate-stack .card .stat { background: #111827; color: #e2e8f0; }
 .resource { font-weight: 700; }
 
-.play-row { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: start; flex: 1; }
+.play-row {
+  display: grid;
+  grid-template-columns: 1.8fr 1.2fr;
+  gap: 12px;
+  align-items: start;
+  flex: 1;
+}
 .entity-column { display: grid; gap: 12px; }
 .top-entity { align-self: stretch; }
 .entity-header { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 12px; align-items: stretch; }
