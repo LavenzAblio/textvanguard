@@ -40,6 +40,7 @@ main#app {
   display: flex;
   align-items: stretch;
   justify-content: center;
+  position: relative;
 }
 
 .panel {
@@ -61,9 +62,9 @@ main#app {
 }
 
 #title-screen.panel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
+  padding: 0;
 }
 
 #game-screen.panel {
@@ -103,24 +104,43 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .title-wrap {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
   align-items: center;
   justify-items: center;
-  min-height: 100%;
-  height: 100vh;
+  min-height: 100vh;
   gap: 32px;
-  width: min(1100px, 90vw);
+  width: min(1300px, 94vw);
   margin: 0 auto;
+  padding: 24px 32px;
 }
 .title-text { display: flex; flex-direction: column; gap: 6px; }
 .title-text .version { font-size: 1.4rem; color: #2563eb; font-weight: 700; }
-.title-buttons { display: grid; gap: 18px; width: 260px; }
+.title-buttons { display: grid; gap: 18px; width: min(280px, 60vw); }
+.record-panel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  height: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  align-content: start;
+}
+.record-panel ol {
+  list-style-position: inside;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 700;
+  text-align: left;
+}
 .title-text h1 { font-size: 3.4rem; }
 
 .game-shell { display: flex; flex-direction: column; gap: 16px; height: 100%; }
 .top-band {
   display: grid;
-  grid-template-columns: 0.9fr 1.1fr 1.4fr;
+  grid-template-columns: 0.9fr 1.05fr 1.55fr;
   gap: 18px;
   align-items: stretch;
 }
@@ -155,7 +175,7 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   display: grid;
   gap: 12px;
   border: 1px solid #1f2937;
-  min-height: 520px;
+  min-height: 620px;
   grid-template-rows: auto 1fr;
 }
 .gate-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -167,11 +187,14 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   border-radius: 10px;
   padding: 10px;
   min-height: 320px;
-  max-height: calc(100vh - 260px);
+  max-height: calc(100vh - 190px);
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
+.gate-stack .card h4 { color: #fff; }
+.gate-stack .card .muted { color: #cbd5e1; }
+.gate-stack .card .stat { background: #111827; color: #e2e8f0; }
 .resource { font-weight: 700; }
 
 .play-row { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: start; flex: 1; }
@@ -216,12 +239,23 @@ body.dragging-card #board { outline: 2px dashed #2563eb; outline-offset: 4px; }
 
 .action-column { display: grid; gap: 12px; }
 .card-list { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
-.card { border-radius: 12px; padding: 12px; background: #fff; border: 1px solid var(--border); position: relative; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05); aspect-ratio: 2 / 3.6; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+.card { border-radius: 12px; padding: 12px; background: #fff; border: 1px solid var(--border); position: relative; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05); aspect-ratio: 2 / 3.9; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
 .card.mini { padding: 10px; }
 .card h4 { margin: 0 0 6px; word-break: keep-all; }
 .card .muted { color: var(--muted); font-size: 0.9rem; }
 .card .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
 .card .stat { padding: 2px 6px; border-radius: 6px; background: #eef2f7; font-size: 0.85rem; color: #334155; }
+.card.disabled::after {
+  content: "획득";
+  position: absolute;
+  inset: 0;
+  background: rgba(37, 99, 235, 0.18);
+  color: #1d4ed8;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  letter-spacing: 0.04em;
+}
 .card .keyword { display: inline-block; padding: 2px 6px; margin: 2px 2px 0 0; border-radius: 6px; background: rgba(91, 141, 239, 0.18); font-size: 0.9rem; color: #1e3a8a; }
 .card .cost { position: absolute; top: 10px; right: 10px; background: #edf2ff; padding: 4px 8px; border-radius: 8px; font-weight: 700; color: #1e3a8a; }
 .card:hover { box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); transform: translateY(-2px); }

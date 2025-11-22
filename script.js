@@ -355,7 +355,7 @@ const keywordCardsPool = [
 
 const state = {
   mode: null,
-  money: 100,
+  money: 120,
   stage: 1,
   stageInCycle: 1,
   cyclesCompleted: 0,
@@ -398,7 +398,7 @@ let dragOriginIdx = null;
 let dragAvatar = null;
 let turnTimerId = null;
 let turnTimerRemaining = 0;
-const TURN_TIME = 45;
+const TURN_TIME = 70;
 
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -407,8 +407,8 @@ function rand(min, max) {
 function randomName(type = "ally") {
   const len =
     type === "enemy"
-      ? rand(3, 5)
-      : Math.random() < 0.75
+      ? rand(4, 6)
+      : Math.random() < 0.7
       ? 2
       : rand(1, 2);
   let name = "";
@@ -447,27 +447,29 @@ function rollKeywords() {
 }
 
 function createVanguard(stage, guaranteedKeyword) {
-  const base = 10 + Math.ceil(stage * 0.8);
+  const variance = 1 + Math.random() * 0.3;
+  const base = (12 + Math.ceil(stage * 1.2)) * variance;
   const unit = {
     id: uuid(),
     name: randomName("ally"),
     tribes: randomTribe(),
     range: rand(1, 3),
-    hp: base + rand(-3, 4),
+    hp: base * 1.15 + rand(-6, 10),
     maxHp: 0,
-    atk: base + rand(-3, 5),
-    def: base + rand(-2, 4),
-    satk: base + rand(-3, 5),
-    sdef: base + rand(-2, 4),
+    atk: base + rand(-6, 8),
+    def: base * 0.9 + rand(-5, 7),
+    satk: base + rand(-6, 8),
+    sdef: base * 0.9 + rand(-5, 7),
     keywords: rollKeywords(),
     role: "중간",
     cost: 0,
   };
   if (guaranteedKeyword) unit.keywords.push(guaranteedKeyword);
-  unit.maxHp = unit.hp;
+  unit.maxHp = Math.max(1, Math.ceil(unit.hp));
   unit.role = calcRole(unit);
-  const power = unit.hp + unit.atk + unit.satk + unit.def + unit.sdef + unit.range * 5 + unit.keywords.length * 10;
-  unit.cost = Math.max(3, Math.ceil(power / 8));
+  const power =
+    unit.hp * 0.8 + unit.atk + unit.satk + unit.def + unit.sdef + unit.range * 3 + unit.keywords.length * 10 + stage * 4;
+  unit.cost = Math.max(4, Math.ceil(power / 7 + stage * 0.6));
   return unit;
 }
 
@@ -477,11 +479,13 @@ function createTactic() {
 }
 
 function getTacticCost(card) {
-  return Math.max(1, Math.ceil(card.cost * state.contractEffects.tacticCostMult));
+  const stageScale = 1 + state.stage * 0.05;
+  return Math.max(2, Math.ceil(card.cost * stageScale * state.contractEffects.tacticCostMult));
 }
 
 function getRerollCost() {
-  return Math.max(1, Math.ceil(state.rerollCost + state.contractEffects.rerollFlat));
+  const scaled = (state.rerollCost + state.contractEffects.rerollFlat) * (1 + state.stage * 0.08);
+  return Math.max(2, Math.ceil(scaled));
 }
 
 function applyShopCost(card) {
@@ -513,11 +517,16 @@ function createShopCards(forceVanguard = false) {
     }
   }
   const adjusted = cards.map((card) => applyShopCost(card));
-  let filtered = adjusted.filter((card) => (card.type === "tactic" ? true : card.cost <= state.money * 1.5));
+  let filtered = adjusted.filter((card) => (card.type === "tactic" ? true : card.cost <= state.money * 1.8));
   if (forceVanguard && filtered.every((c) => c.type !== "vanguard")) {
     return createShopCards(forceVanguard);
   }
   if (filtered.length === 0) filtered = adjusted;
+  const affordable = filtered.filter((c) => c.cost <= state.money);
+  if (affordable.length === 0) {
+    const cheapest = filtered.slice().sort((a, b) => a.cost - b.cost)[0];
+    if (cheapest) cheapest.cost = Math.max(1, Math.ceil(Math.max(state.money, cheapest.cost * 0.75)));
+  }
   return filtered;
 }
 
@@ -753,7 +762,7 @@ function startUnitDrag(idx) {
 function resetState(mode) {
   Object.assign(state, {
     mode,
-    money: 100,
+    money: 120,
     stage: 1,
     stageInCycle: 1,
     cyclesCompleted: 0,
@@ -767,7 +776,7 @@ function resetState(mode) {
     shopTaken: new Set(),
     shopPicked: false,
     initialVanguardNeeded: true,
-    rerollCost: 5,
+    rerollCost: 6,
     entity: null,
     currentTargets: [],
     nextTargets: [],
@@ -1104,7 +1113,7 @@ function reroll() {
   const cost = getRerollCost();
   if (state.money < cost) return;
   state.money -= cost;
-  state.rerollCost = Math.ceil(state.rerollCost * 1.25 + 1);
+  state.rerollCost = Math.ceil(state.rerollCost * 1.35 + 2);
   summon();
   render();
 }
@@ -1170,7 +1179,7 @@ function onCellClick(event, cell, idx) {
 function moveUnitTo(fromIdx, targetIdx) {
   if (targetIdx == null || fromIdx === targetIdx) return;
   if (!isAdjacent(fromIdx, targetIdx)) return;
-  const cost = Math.ceil(2 + Math.floor(state.stage * 0.2) + state.contractEffects.moveCostFlat);
+  const cost = Math.ceil(3 + Math.floor(state.stage * 0.35) + state.contractEffects.moveCostFlat);
   if (state.money < cost) return;
   state.money -= cost;
   const temp = state.board[targetIdx];
@@ -1220,14 +1229,14 @@ function applyKeywordToCard(keyword, card) {
 }
 
 function spawnEntity() {
-  const base = 10 + Math.ceil(state.stage * 1.4);
   const isBoss = state.stageInCycle === 4;
-  const hp = isBoss ? base * 4.5 : base * 3.2;
-  const atk = isBoss ? base * 0.9 : base * 0.65;
-  const satk = isBoss ? base * 0.9 : base * 0.65;
-  const def = isBoss ? base * 0.7 : base * 0.55;
+  const base = (14 + Math.ceil(state.stage * 1.9)) * (1 + Math.random() * 0.25);
+  const hp = isBoss ? base * 7 + rand(0, Math.ceil(base * 0.8)) : base * 5 + rand(0, Math.ceil(base * 0.6));
+  const atk = isBoss ? base * 0.55 + rand(0, Math.ceil(base * 0.2)) : base * 0.42 + rand(0, Math.ceil(base * 0.15));
+  const satk = isBoss ? base * 0.55 + rand(0, Math.ceil(base * 0.2)) : base * 0.42 + rand(0, Math.ceil(base * 0.15));
+  const def = isBoss ? base * 0.45 + rand(0, Math.ceil(base * 0.12)) : base * 0.35 + rand(0, Math.ceil(base * 0.1));
   const sdef = def;
-  const threat = isBoss ? 3 + rand(0, 2) : 1 + rand(0, 1);
+  const threat = isBoss ? 3 + rand(1, 3) : 1 + rand(0, 2);
   state.entity = {
     name: isBoss && state.stage === 20 ? "아키리히치" : randomName("enemy"),
     boss: isBoss,
@@ -1340,7 +1349,7 @@ function endTurn() {
 }
 
 function onEntityDefeated() {
-  const rewardBase = 6 + state.stage * (state.entity.boss ? 4 : 2);
+  const rewardBase = 10 + state.stage * (state.entity.boss ? 6 : 3);
   const reward = Math.ceil(rewardBase * state.contractEffects.rewardMult);
   state.money += reward;
   showEntityEffect("격파");
