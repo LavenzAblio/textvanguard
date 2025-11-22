@@ -64,6 +64,14 @@ main#app {
   transform: translateY(0);
 }
 
+#fx-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  overflow: hidden;
+}
+
 .title-hero {
   position: relative;
   width: 100%;
@@ -280,12 +288,19 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .entity-column { display: grid; gap: 12px; }
 .top-entity { align-self: stretch; }
 .entity-header { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: stretch; }
-.entity-portrait { position: relative; height: 260px; border-radius: 16px; border: 1px solid var(--border); background: #f8fafc; display: grid; place-items: center; overflow: hidden; }
+.entity-portrait { position: relative; height: 260px; border-radius: 16px; border: 5px solid var(--border); background: #f8fafc; display: grid; place-items: center; overflow: hidden; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
 .entity-info { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: #fff; display: grid; gap: 8px; }
 .entity-info .entity-name { font-weight: 800; font-size: 1.05rem; }
 .entity-info .stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .entity-info .stat-chip { background: #e2e8f0; padding: 6px 8px; border-radius: 8px; font-weight: 700; color: #1f2937; }
 .entity-info .keywords { display: flex; flex-wrap: wrap; gap: 6px; }
+.keyword-row, .card .row { flex-wrap: wrap; }
+.keyword-row { display: flex; gap: 6px; }
+.keyword-chip { display: inline-flex; align-items: center; padding: 4px 8px; background: #e0f2fe; border-radius: 999px; font-weight: 800; color: #1d4ed8; }
+.keyword-line { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+.keyword-desc { color: #0f172a; font-weight: 600; }
+.entity-portrait:not(.empty) { border-color: var(--entity-color, #60a5fa); box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.15); }
+.entity-portrait.boss { box-shadow: 0 0 0 8px rgba(234, 88, 12, 0.4); }
 .entity-portrait .circle { width: 160px; height: 160px; border-radius: 50%; background: #b45309; border: 12px solid #f1f5f9; display: grid; place-items: center; color: #fff; font-weight: 800; position: relative; }
 .entity-portrait .ring { animation: pulse 1.2s ease infinite; box-shadow: 0 0 0 12px rgba(239, 68, 68, 0.22); }
 .entity-meta { position: absolute; bottom: 12px; left: 12px; background: rgba(0, 0, 0, 0.6); color: #fff; padding: 8px 10px; border-radius: 10px; font-size: 0.9rem; }
@@ -361,6 +376,17 @@ body.dragging-card #board { outline: 2px dashed #2563eb; outline-offset: 4px; }
 .effect-layer { position: absolute; inset: 0; pointer-events: none; }
 .cell-effect { position: absolute; inset: 2px; border-radius: 10px; display: grid; place-items: center; color: #7f1d1d; font-weight: 800; background: rgba(248, 113, 113, 0.12); border: 2px solid #fca5a5; animation: pop 0.4s ease, fade 0.8s ease forwards; }
 .cell-effect.heal { color: #166534; background: rgba(74, 222, 128, 0.15); border-color: #4ade80; }
+.unit-death { position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(239, 68, 68, 0.35), transparent); animation: fade 0.7s ease forwards; filter: blur(1px); }
+.tactic-target { box-shadow: inset 0 0 0 2px #22c55e !important; border-color: #22c55e !important; }
+.tactic-target.entity-portrait { box-shadow: 0 0 0 4px #22c55e, 0 0 0 10px rgba(34, 197, 94, 0.25); }
+.damage-number { position: absolute; font-weight: 900; color: #dc2626; text-shadow: 0 2px 8px rgba(0,0,0,0.25); transform: translate(-50%, -50%); animation: rise 1s ease forwards; }
+.damage-number.heal { color: #16a34a; }
+.damage-number.crit { color: #f97316; text-shadow: 0 2px 10px rgba(249,115,22,0.45); }
+.laser-beam { position: fixed; height: 4px; background: var(--laser-color, #38bdf8); transform-origin: left center; border-radius: 999px; transition: transform 0.18s ease; filter: drop-shadow(0 0 8px var(--laser-color)); z-index: 55; }
+.laser-beam.crit { height: 6px; }
+.explosion { position: fixed; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle, var(--explosion-color, #38bdf8), transparent 65%); transform: translate(-50%, -50%) scale(0.6); animation: boom 0.5s ease forwards; pointer-events: none; }
+.explosion.strong { width: 64px; height: 64px; animation-duration: 0.8s; }
+.shake { animation: shake var(--shake-intensity, 6px) 0.2s ease; }
 
 .inspect-panel { background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 10px; border: 1px solid #1f2937; min-height: 64px; }
 .inspect-panel.hidden { display: none; }
@@ -370,6 +396,11 @@ body.dragging-card #board { outline: 2px dashed #2563eb; outline-offset: 4px; }
 
 .footer-row { display: flex; align-items: center; justify-content: space-between; }
 .footer-info { display: flex; gap: 12px; color: var(--muted); font-weight: 700; }
+
+.keyword-detail { background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 12px; border: 1px solid #1f2937; margin-top: 6px; }
+.keyword-detail.hidden { display: none; }
+.keyword-detail-title { font-weight: 800; margin-bottom: 6px; }
+.keyword-detail-body { display: grid; gap: 6px; }
 
 .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); display: grid; place-items: center; padding: 24px; z-index: 30; backdrop-filter: blur(2px); }
 .overlay-surface { width: min(1280px, 100%); border-radius: 16px; padding: 18px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2); }
@@ -429,4 +460,22 @@ body.dragging-card #board { outline: 2px dashed #2563eb; outline-offset: 4px; }
 
 @keyframes fade {
   to { opacity: 0; }
+}
+
+@keyframes boom {
+  0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0.8; }
+  80% { transform: translate(-50%, -50%) scale(1.05); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(var(--shake-intensity), 0); }
+  50% { transform: translate(calc(var(--shake-intensity) * -1), 0); }
+  75% { transform: translate(var(--shake-intensity), 0); }
+}
+
+@keyframes rise {
+  from { transform: translate(-50%, -40%) scale(0.95); opacity: 1; }
+  to { transform: translate(-50%, -110%) scale(1.05); opacity: 0; }
 }

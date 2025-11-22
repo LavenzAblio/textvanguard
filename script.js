@@ -331,13 +331,24 @@ const keywords = {
   회복술사: () => ({ healOnEnd: 4 }),
 };
 
+const keywordDescriptions = {
+  전사의심장: "체력이 절반 이하일 때 물리 공격력이 상승합니다.",
+  마법의심장: "체력이 절반 이하일 때 특수 공격력이 상승합니다.",
+  끈질김: "치명 피해를 받아도 한 번은 체력 1로 생존합니다.",
+  부활: "처치 시 게이트로 돌아옵니다.",
+  보스슬레이어: "보스에게 주는 피해가 증가합니다.",
+  미니언슬레이어: "일반 엔티티에게 주는 피해가 증가합니다.",
+  천상의보호막: "피해를 무시할 확률이 있습니다.",
+  회복술사: "턴 종료 시 사거리 내 아군을 회복합니다.",
+};
+
 const tacticCards = [
-  { name: "밴드", type: "tactic", cost: 5, text: "체력 25% 회복", effect: (state) => healOne(state, 0.25) },
-  { name: "메드킷", type: "tactic", cost: 10, text: "체력 50% 회복", effect: (state) => healOne(state, 0.5) },
-  { name: "신의눈물", type: "tactic", cost: 15, text: "체력 모두 회복", effect: (state) => healOne(state, 1) },
+  { name: "밴드", type: "tactic", cost: 5, text: "체력 25% 회복", target: "ally", effect: (state, target) => healOne(state, 0.25, target) },
+  { name: "메드킷", type: "tactic", cost: 10, text: "체력 50% 회복", target: "ally", effect: (state, target) => healOne(state, 0.5, target) },
+  { name: "신의눈물", type: "tactic", cost: 15, text: "체력 모두 회복", target: "ally", effect: (state, target) => healOne(state, 1, target) },
   { name: "고무", type: "tactic", cost: 20, text: "턴 동안 피해 +20%", effect: (state) => (state.turnBuff.damage += 0.2) },
-  { name: "파이어볼", type: "tactic", cost: 25, text: "엔티티 체력 20% 피해", effect: (state) => damageEntity(state, 0.2) },
-  { name: "자극제", type: "tactic", cost: 15, text: "한 뱅가드 피해 +100%", effect: (state) => buffOne(state, 1.0) },
+  { name: "파이어볼", type: "tactic", cost: 25, text: "엔티티 체력 20% 피해", target: "enemy", effect: (state, target) => damageEntity(state, 0.2, target) },
+  { name: "자극제", type: "tactic", cost: 15, text: "한 뱅가드 피해 +100%", target: "ally", effect: (state, target) => buffOne(state, 1.0, target) },
   { name: "에너지가드", type: "tactic", cost: 30, text: "최전방 무적", effect: (state) => (state.turnBuff.shieldFront = true) },
   { name: "약점파악", type: "tactic", cost: 15, text: "크리티컬 확률 +20%", effect: (state) => (state.turnBuff.crit += 0.2) },
   { name: "승리의함성", type: "tactic", cost: 40, text: "스테이지 피해 +20%", effect: (state) => (state.stageBuff.damage += 0.2) },
@@ -359,6 +370,7 @@ const state = {
   stage: 1,
   stageInCycle: 1,
   cyclesCompleted: 0,
+  bossClearedCount: 0,
   restStage: false,
   board: Array(9).fill(null),
   gate: [],
@@ -398,10 +410,97 @@ let dragOriginIdx = null;
 let dragAvatar = null;
 let turnTimerId = null;
 let turnTimerRemaining = 0;
-const TURN_TIME = 49;
+const TURN_TIME = 34;
+
+const elements = [
+  { key: "fire", label: "화염", color: "#ef4444" },
+  { key: "ice", label: "서리", color: "#38bdf8" },
+  { key: "void", label: "공허", color: "#8b5cf6" },
+  { key: "stone", label: "대지", color: "#10b981" },
+];
 
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function lerpStat(stage, low, high, maxStage = 80) {
+  const clamped = Math.min(stage, maxStage);
+  const t = Math.pow((clamped - 1) / Math.max(1, maxStage - 1), 2);
+  return Math.max(1, Math.round(low + (high - low) * t));
+}
+
+let fxLayer = null;
+function getFxLayer() {
+  if (!fxLayer) {
+    fxLayer = document.createElement("div");
+    fxLayer.id = "fx-layer";
+    document.body.appendChild(fxLayer);
+  }
+  return fxLayer;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getCenter(el) {
+  const rect = el.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+}
+
+function screenShake(intensity = 6, duration = 220) {
+  const layer = getFxLayer();
+  layer.classList.add("shake");
+  layer.style.setProperty("--shake-intensity", `${intensity}px`);
+  setTimeout(() => layer.classList.remove("shake"), duration);
+}
+
+function spawnExplosion(point, { strong = false, color = "#38bdf8" } = {}) {
+  const layer = getFxLayer();
+  const boom = document.createElement("div");
+  boom.className = `explosion ${strong ? "strong" : ""}`;
+  boom.style.left = `${point.x}px`;
+  boom.style.top = `${point.y}px`;
+  boom.style.setProperty("--explosion-color", color);
+  layer.appendChild(boom);
+  setTimeout(() => boom.remove(), strong ? 900 : 500);
+}
+
+function showDamageNumber(point, text, tone = "hit") {
+  const layer = getFxLayer();
+  const num = document.createElement("div");
+  num.className = `damage-number ${tone}`;
+  num.textContent = text;
+  num.style.left = `${point.x}px`;
+  num.style.top = `${point.y}px`;
+  layer.appendChild(num);
+  setTimeout(() => num.remove(), 1000);
+}
+
+function animateLaser(fromEl, toEl, { color = "#38bdf8", crit = false } = {}) {
+  return new Promise((resolve) => {
+    const layer = getFxLayer();
+    const from = getCenter(fromEl);
+    const to = getCenter(toEl);
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const dist = Math.hypot(dx, dy);
+    const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+    const beam = document.createElement("div");
+    beam.className = `laser-beam ${crit ? "crit" : ""}`;
+    beam.style.setProperty("--laser-color", color);
+    beam.style.width = `${dist}px`;
+    beam.style.transform = `translate(${from.x}px, ${from.y}px) rotate(${angle}deg) scaleX(0)`;
+    layer.appendChild(beam);
+    requestAnimationFrame(() => {
+      beam.style.transform = `translate(${from.x}px, ${from.y}px) rotate(${angle}deg) scaleX(1)`;
+    });
+    setTimeout(() => {
+      beam.remove();
+      spawnExplosion(to, { strong: crit, color });
+      resolve();
+    }, 220);
+  });
 }
 
 function ceilStats(unit) {
@@ -447,35 +546,38 @@ function rollKeywords() {
 }
 
 function createVanguard(stage, guaranteedKeyword) {
-  const variance = 1 + Math.random() * 0.55;
-  const base = Math.ceil((16 + stage * 1.7) * variance);
+  const variance = 0.9 + Math.random() * 0.25;
+  const hpBase = lerpStat(stage, rand(4, 8), rand(9000, 10500)) * variance;
+  const atkBase = lerpStat(stage, rand(2, 5), rand(4200, 5200)) * variance;
+  const satkBase = lerpStat(stage, rand(2, 5), rand(4200, 5200)) * variance;
+  const defBase = lerpStat(stage, rand(1, 4), rand(2800, 3600)) * variance;
+  const sdefBase = lerpStat(stage, rand(1, 4), rand(2800, 3600)) * variance;
   const unit = {
     id: uuid(),
     type: "vanguard",
     name: randomName("ally"),
     tribes: randomTribe(),
     range: rand(1, 3),
-    hp: base * 1.25 + rand(-8, 14),
+    hp: hpBase,
     maxHp: 0,
-    atk: base + rand(-10, 12),
-    def: base * 0.95 + rand(-8, 10),
-    satk: base + rand(-10, 12),
-    sdef: base * 0.95 + rand(-8, 10),
+    atk: atkBase,
+    def: defBase,
+    satk: satkBase,
+    sdef: sdefBase,
     keywords: rollKeywords(),
     cost: 0,
   };
   if (guaranteedKeyword) unit.keywords.push(guaranteedKeyword);
   unit.maxHp = Math.max(1, Math.ceil(unit.hp));
+  unit.hp = unit.maxHp;
   const power =
-    unit.hp * 0.9 +
-    unit.atk +
-    unit.satk +
-    unit.def +
-    unit.sdef +
-    unit.range * 3 +
-    unit.keywords.length * 12 +
-    stage * 5.2;
-  unit.cost = Math.max(4, Math.ceil(power / 7 + stage * 0.8));
+    unit.hp * 0.08 +
+    (unit.atk + unit.satk) * 0.28 +
+    (unit.def + unit.sdef) * 0.18 +
+    unit.range * 40 +
+    unit.keywords.length * 55 +
+    stage * 18;
+  unit.cost = Math.max(4, Math.ceil(power / 90));
   return ceilStats(unit);
 }
 
@@ -688,7 +790,14 @@ function renderCard(card, onClick, options = {}) {
   });
 
   el.addEventListener("pointerdown", (e) => {
-    if (card.type === "tactic" || !draggable || disabled) return;
+    if (!draggable || disabled) return;
+    if (card.type === "tactic") {
+      if (card.target) {
+        e.preventDefault();
+        startTacticDrag(card);
+      }
+      return;
+    }
     e.preventDefault();
     startCardDrag(card);
   });
@@ -709,6 +818,9 @@ function createFloatingAvatar(text) {
 
 function clearDropTargets() {
   $$(".cell").forEach((c) => c.classList.remove("drop-target"));
+  $$(".cell").forEach((c) => c.classList.remove("tactic-target"));
+  const portrait = $("#entity-portrait");
+  if (portrait) portrait.classList.remove("tactic-target");
 }
 
 function isAdjacent(a, b) {
@@ -744,6 +856,10 @@ function handlePointerMove(e) {
   dragAvatar.style.left = `${e.clientX}px`;
   dragAvatar.style.top = `${e.clientY}px`;
   clearDropTargets();
+  if (draggedCard?.type === "tactic" && draggedCard.target) {
+    highlightTacticTargets(draggedCard);
+    return;
+  }
   const idx = getDropIndex(e);
   if (idx == null) return;
   if (dragOriginIdx == null || isAdjacent(dragOriginIdx, idx)) {
@@ -764,6 +880,12 @@ function cleanupDrag() {
 
 function handlePointerUp(e) {
   const idx = getDropIndex(e);
+  if (draggedCard && draggedCard.type === "tactic" && draggedCard.target) {
+    const target = getTacticDrop(e, draggedCard);
+    if (target) attemptPlayTactic(draggedCard, target);
+    cleanupDrag();
+    return;
+  }
   if (draggedCard && dragOriginIdx == null && idx != null) {
     placeFromGate(draggedCard, idx);
   }
@@ -781,6 +903,45 @@ function startCardDrag(card) {
   document.addEventListener("pointerup", handlePointerUp);
 }
 
+function startTacticDrag(card) {
+  draggedCard = card;
+  dragOriginIdx = null;
+  dragAvatar = createFloatingAvatar(card.name);
+  clearDropTargets();
+  highlightTacticTargets(card);
+  document.addEventListener("pointermove", handlePointerMove);
+  document.addEventListener("pointerup", handlePointerUp);
+}
+
+function getValidTacticCells(card) {
+  if (card.target === "ally") return state.board.map((u, idx) => (u ? idx : null)).filter((x) => x != null);
+  if (card.target === "anyCell") return state.board.map((_, idx) => idx);
+  return [];
+}
+
+function highlightTacticTargets(card) {
+  const cells = getValidTacticCells(card);
+  cells.forEach((idx) => {
+    const cell = $(`.cell[data-idx='${idx}']`);
+    if (cell) cell.classList.add("tactic-target");
+  });
+  if (card.target === "enemy" && state.entity) {
+    const portrait = $("#entity-portrait");
+    if (portrait) portrait.classList.add("tactic-target");
+  }
+}
+
+function getTacticDrop(event, card) {
+  const targetEl = document.elementFromPoint(event.clientX, event.clientY);
+  const portrait = targetEl?.closest?.("#entity-portrait");
+  if (card.target === "enemy" && portrait && state.entity) return { type: "enemy", entity: state.entity };
+  const idx = getDropIndex(event);
+  if (idx == null) return null;
+  if (card.target === "ally" && state.board[idx]) return { type: "ally", idx };
+  if (card.target === "anyCell") return { type: "cell", idx };
+  return null;
+}
+
 function startUnitDrag(idx) {
   dragOriginIdx = idx;
   draggedCard = state.board[idx];
@@ -796,6 +957,7 @@ function resetState(mode) {
     stage: 1,
     stageInCycle: 1,
     cyclesCompleted: 0,
+    bossClearedCount: 0,
     restStage: false,
     board: Array(9).fill(null),
     gate: [],
@@ -872,7 +1034,7 @@ function render() {
     typeEl.textContent = "일반";
   }
   if (stageCycle) {
-    const pos = ((state.stage - 1) % 4) + 1;
+    const pos = state.stageInCycle;
     if (pos === 4) stageCycle.textContent = "보스 스테이지 (4 / 4)";
     else stageCycle.textContent = `일반 스테이지 (${pos} / 3)`;
   }
@@ -884,11 +1046,29 @@ function render() {
   renderAttackPreview();
 }
 
+function updateKeywordDetail(target) {
+  const panel = $("#keyword-detail");
+  const body = $("#keyword-detail-body");
+  if (!panel || !body) return;
+  if (!target || !target.keywords || target.keywords.length === 0) {
+    panel.classList.add("hidden");
+    body.innerHTML = "";
+    return;
+  }
+  panel.classList.remove("hidden");
+  body.innerHTML = target.keywords
+    .map((k) => `<div class="keyword-line"><span class="keyword-chip">${k}</span><span class="keyword-desc">${
+      keywordDescriptions[k] || "효과 정보 없음"
+    }</span></div>`)
+    .join("");
+}
+
 function showInspect(target) {
   const panel = $("#inspect-panel");
   if (!panel) return;
   if (!target) {
     panel.classList.add("hidden");
+    updateKeywordDetail(null);
     return;
   }
   const keywordHtml = (target.keywords || []).map((k) => `<span class="keyword">${k}</span>`).join("");
@@ -915,6 +1095,7 @@ function showInspect(target) {
     <div class="row">${keywordHtml}</div>
   `;
   panel.classList.remove("hidden");
+  updateKeywordDetail(target);
 }
 
 function hideInspect() {
@@ -927,10 +1108,17 @@ function renderGate() {
     $("#gate"),
     state.gate,
     (card) => {
-      if (card.type === "tactic") return playTactic(card);
+      if (card.type === "tactic") {
+        if (card.target) {
+          startTacticDrag(card);
+        } else {
+          attemptPlayTactic(card);
+        }
+        return;
+      }
       return null;
     },
-    { draggable: true, tacticOnlyClick: true }
+    { draggable: true, tacticOnlyClick: false }
   );
 }
 
@@ -946,17 +1134,24 @@ function renderEntityPanel() {
     empty.textContent = "엔티티 없음";
     portrait.appendChild(empty);
     if (inline) inline.innerHTML = "";
+    updateKeywordDetail(null);
     return;
   }
   portrait.classList.remove("empty");
+  portrait.style.setProperty("--entity-color", state.entity.elementColor || "#60a5fa");
+  portrait.classList.toggle("boss", !!state.entity.boss);
   const circle = document.createElement("div");
   circle.className = "circle ring";
   circle.textContent = state.entity.name;
   const meta = document.createElement("div");
   meta.className = "entity-meta";
-  meta.innerHTML = `HP ${state.entity.hp}/${state.entity.maxHp}<br/>위협력 ${state.entity.threat}`;
+  meta.innerHTML = `HP ${state.entity.hp}/${state.entity.maxHp}<br/>위협력 ${state.entity.threat}<br/>속성 ${
+    state.entity.elementLabel || "-"
+  }`;
   portrait.appendChild(circle);
   portrait.appendChild(meta);
+  portrait.onmouseenter = () => showInspect(state.entity);
+  portrait.onmouseleave = hideInspect;
   if (inline) {
     inline.innerHTML = `
       <div class="name">${state.entity.name}</div>
@@ -967,9 +1162,14 @@ function renderEntityPanel() {
         <span class="stat-chip">특공 ${state.entity.satk}</span>
         <span class="stat-chip">물방 ${state.entity.def}</span>
         <span class="stat-chip">특방 ${state.entity.sdef}</span>
+        <span class="stat-chip">속성 ${state.entity.elementLabel || "-"}</span>
       </div>
+      <div class="keyword-row">${(state.entity.keywords || [])
+        .map((k) => `<span class="keyword">${k}</span>`)
+        .join("")}</div>
     `;
   }
+  updateKeywordDetail(state.entity);
 }
 
 function pickTargets() {
@@ -1095,6 +1295,15 @@ function showEntityEffect(text) {
   eff.textContent = text;
   portrait.appendChild(eff);
   setTimeout(() => eff.remove(), 800);
+}
+
+function animateUnitDeath(idx) {
+  const cell = $(`#board .cell[data-idx='${idx}']`);
+  if (!cell) return;
+  const boom = document.createElement("div");
+  boom.className = "unit-death";
+  cell.appendChild(boom);
+  setTimeout(() => boom.remove(), 700);
 }
 
 function resetTurnTimer() {
@@ -1265,6 +1474,7 @@ function sacrificeUnit(idx, unit) {
   state.money += refund;
   state.board[idx] = null;
   clearSacrificeButton();
+  animateUnitDeath(idx);
   render();
 }
 
@@ -1298,35 +1508,46 @@ function moveUnitTo(fromIdx, targetIdx) {
   render();
 }
 
-function playTactic(card) {
+function attemptPlayTactic(card, target = null) {
   const cost = getTacticCost(card);
   if (state.money < cost) return;
+  if (card.target === "ally" && (!target || target.idx == null || !state.board[target.idx])) return;
+  if (card.target === "enemy" && !state.entity) return;
   state.money -= cost;
-  card.effect(state);
+  card.effect(state, target);
   state.gate = state.gate.filter((c) => c.id !== card.id);
   render();
 }
 
-function healOne(stateRef, ratio) {
-  const unit = stateRef.board.find((u) => u);
+function healOne(stateRef, ratio, target) {
+  const idx = target?.idx ?? stateRef.board.findIndex((u) => u);
+  if (idx == null || idx < 0) return;
+  const unit = stateRef.board[idx];
   if (!unit) return;
   const heal = Math.ceil(unit.maxHp * ratio);
   unit.hp = Math.min(unit.maxHp, unit.hp + heal);
-  const idx = stateRef.board.findIndex((u) => u === unit);
-  if (idx >= 0) showCellEffect(idx, `+${heal}`, "heal");
+  showCellEffect(idx, `+${heal}`, "heal");
 }
 
-function buffOne(stateRef, dmg) {
-  const unit = stateRef.board.find((u) => u);
+function buffOne(stateRef, dmg, target) {
+  const idx = target?.idx ?? stateRef.board.findIndex((u) => u);
+  if (idx == null || idx < 0) return;
+  const unit = stateRef.board[idx];
   if (!unit) return;
   unit.tempBonus = (unit.tempBonus || 0) + dmg;
+  const cell = $(`#board .cell[data-idx='${idx}']`);
+  if (cell) spawnExplosion(getCenter(cell), { color: "#22c55e" });
 }
 
-function damageEntity(stateRef, ratio) {
+function damageEntity(stateRef, ratio, target) {
   if (!stateRef.entity) return;
   const dmg = Math.ceil(stateRef.entity.hp * ratio);
   stateRef.entity.hp -= dmg;
-  showEntityEffect(`-${dmg}`);
+  const portrait = $("#entity-portrait");
+  if (portrait) {
+    showDamageNumber(getCenter(portrait), `-${dmg}`);
+    spawnExplosion(getCenter(portrait), { strong: false, color: "#ef4444" });
+  }
   if (stateRef.entity.hp <= 0) onEntityDefeated();
 }
 
@@ -1339,24 +1560,30 @@ function applyKeywordToCard(keyword, card) {
 
 function spawnEntity() {
   const isBoss = state.stageInCycle === 4;
-  const base = Math.ceil((18 + state.stage * 2.4) * (1 + Math.random() * 0.6));
-  const hp = isBoss ? base * 9 + rand(0, Math.ceil(base * 1.1)) : base * 7 + rand(0, Math.ceil(base * 0.9));
-  const atk = isBoss ? base * 0.32 + rand(0, Math.ceil(base * 0.18)) : base * 0.24 + rand(0, Math.ceil(base * 0.14));
-  const satk = isBoss ? base * 0.32 + rand(0, Math.ceil(base * 0.18)) : base * 0.24 + rand(0, Math.ceil(base * 0.14));
-  const def = isBoss ? base * 0.22 + rand(0, Math.ceil(base * 0.12)) : base * 0.18 + rand(0, Math.ceil(base * 0.1));
-  const sdef = def;
-  const threat = isBoss ? 4 + rand(1, 3) : 2 + rand(0, 2);
+  const variance = 0.9 + Math.random() * 0.25;
+  const element = elements[rand(0, elements.length - 1)];
+  const isFinalBoss = isBoss && state.bossClearedCount >= 19;
+  const hpBase = (isBoss ? lerpStat(state.stage, 220, 7600) : lerpStat(state.stage, 36, 3800)) * variance;
+  const atkBase = (isBoss ? lerpStat(state.stage, 42, 5600) : lerpStat(state.stage, 30, 4500)) * variance;
+  const satkBase = (isBoss ? lerpStat(state.stage, 42, 5600) : lerpStat(state.stage, 30, 4500)) * variance;
+  const defBase = (isBoss ? lerpStat(state.stage, 22, 2800) : lerpStat(state.stage, 12, 2000)) * variance;
+  const threat = isBoss ? Math.max(3, Math.round(3.5 + state.stage / 14)) : Math.max(2, Math.round(2 + state.stage / 18));
+  const keywordsPicked = rollKeywords();
+  if (isBoss && keywordsPicked.length < 1) keywordsPicked.push("천상의보호막");
   state.entity = {
-    name: isBoss && state.stage === 20 ? "아키리히치" : randomName("enemy"),
+    name: isFinalBoss ? "아키리히치" : randomName("enemy"),
     boss: isBoss,
-    hp: Math.ceil(hp),
-    maxHp: Math.ceil(hp),
-    atk: Math.ceil(atk),
-    satk: Math.ceil(satk),
-    def: Math.ceil(def),
-    sdef: Math.ceil(sdef),
+    element: element.key,
+    elementColor: element.color,
+    elementLabel: element.label,
+    hp: Math.ceil(hpBase),
+    maxHp: Math.ceil(hpBase),
+    atk: Math.ceil(atkBase),
+    satk: Math.ceil(satkBase),
+    def: Math.ceil(defBase),
+    sdef: Math.ceil(defBase),
     threat,
-    keywords: rollKeywords(),
+    keywords: keywordsPicked,
   };
   state.currentTargets = pickTargets();
   state.nextTargets = pickTargets();
@@ -1372,35 +1599,47 @@ function calculateDamage(unit, entity, idx = 0) {
   const physical = Math.max(0, unit.atk - entity.def);
   const magical = Math.max(0, unit.satk - entity.sdef);
   let dmg = physical + magical;
+  if (dmg < 1) dmg = 1;
   if (unit.tempBonus) dmg *= 1 + unit.tempBonus;
   if (unit.keywords.includes("보스슬레이어") && entity.boss) dmg *= 1.2;
   if (unit.keywords.includes("미니언슬레이어") && !entity.boss) dmg *= 1.2;
   const frontBonus = idx < 3 ? state.contractEffects.frontDamage : 0;
   dmg *= 1 + state.turnBuff.damage + state.stageBuff.damage + state.contractEffects.allyDamage + frontBonus;
-  dmg = Math.ceil(dmg);
+  dmg = Math.max(1, Math.ceil(dmg));
   if (isCrit) dmg *= 2;
   if (ultra) dmg *= 4;
-  return dmg;
+  return { dmg, isCrit, ultra };
 }
 
-function entityAttack() {
+async function entityAttack() {
   if (!state.entity) return;
+  const portrait = $("#entity-portrait");
   const targets = state.currentTargets.length ? [...state.currentTargets] : pickTargets();
-  showEntityEffect("공격");
-  targets.forEach((idx) => {
+  for (const idx of targets) {
     const unit = state.board[idx];
-    if (!unit) return;
-    if (state.turnBuff.shieldFront && idx < 3) {
-      return;
+    const cell = $(`#board .cell[data-idx='${idx}']`);
+    if (!cell) continue;
+    if (!unit) {
+      if (portrait) await animateLaser(portrait, cell, { color: "#ef4444" });
+      continue;
     }
+    if (state.turnBuff.shieldFront && idx < 3) {
+      if (portrait) await animateLaser(portrait, cell, { color: "#94a3b8" });
+      spawnExplosion(getCenter(cell), { color: "#94a3b8" });
+      continue;
+    }
+    if (portrait) await animateLaser(portrait, cell, { color: "#ef4444" });
     const phys = Math.max(0, state.entity.atk - unit.def);
     const mag = Math.max(0, state.entity.satk - unit.sdef);
     let dmg = Math.ceil(phys + mag);
-    dmg = Math.max(0, Math.ceil(dmg * Math.max(0, 1 + state.contractEffects.enemyDamageTaken)));
+    if (dmg < 1) dmg = 1;
+    dmg = Math.max(1, Math.ceil(dmg * Math.max(0, 1 + state.contractEffects.enemyDamageTaken)));
     unit.hp -= dmg;
-    showCellEffect(idx, `피해량 ${dmg}`);
+    showDamageNumber(getCenter(cell), `-${dmg}`);
+    showCellEffect(idx, `-${dmg}`);
     if (unit.hp <= 0) handleDeath(idx, unit);
-  });
+    await wait(100);
+  }
   state.currentTargets = state.nextTargets.length ? [...state.nextTargets] : pickTargets();
   state.nextTargets = pickTargets();
   renderAttackPreview();
@@ -1420,26 +1659,42 @@ function handleDeath(idx, unit) {
     return;
   }
   state.board[idx] = null;
+  animateUnitDeath(idx);
   showCellEffect(idx, "퇴각");
 }
 
-function endTurn() {
+async function endTurn() {
   clearInterval(turnTimerId);
   if (!state.entity) return;
-  // player attacks first
-  state.board.forEach((unit, idx) => {
-    if (!unit) return;
-    const dmg = calculateDamage(unit, state.entity, idx);
-    state.entity.hp -= dmg;
-    showEntityEffect(`-${dmg}`);
-  });
+  const portrait = $("#entity-portrait");
+  const attackers = state.board
+    .map((unit, idx) => {
+      if (!unit) return null;
+      const result = calculateDamage(unit, state.entity, idx);
+      return { unit, idx, ...result };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.dmg - b.dmg);
 
-  if (state.entity.hp <= 0) {
-    onEntityDefeated();
-    return;
+  for (const atk of attackers) {
+    const cell = $(`#board .cell[data-idx='${atk.idx}']`);
+    if (cell && portrait) {
+      await animateLaser(cell, portrait, {
+        color: atk.ultra ? "#a855f7" : atk.isCrit ? "#f97316" : "#38bdf8",
+        crit: atk.isCrit,
+      });
+    }
+    state.entity.hp -= atk.dmg;
+    if (portrait) showDamageNumber(getCenter(portrait), `-${atk.dmg}`, atk.isCrit || atk.ultra ? "crit" : "hit");
+    if (atk.ultra) screenShake(10, 260);
+    if (state.entity.hp <= 0) {
+      await onEntityDefeated();
+      return;
+    }
+    await wait(80);
   }
 
-  entityAttack();
+  await entityAttack();
   state.turnBuff = { damage: 0, crit: 0, shieldFront: false };
   state.board.forEach((u) => {
     if (!u) return;
@@ -1456,21 +1711,34 @@ function endTurn() {
   resetTurnTimer();
 }
 
-function onEntityDefeated() {
+async function onEntityDefeated() {
+  const defeated = state.entity;
+  const portrait = $("#entity-portrait");
+  if (portrait) {
+    spawnExplosion(getCenter(portrait), { strong: true, color: defeated?.elementColor || "#f97316" });
+    if (defeated?.boss) screenShake(12, 300);
+  }
   const rewardBase = 16 + state.stage * (state.entity.boss ? 8 : 5);
   const reward = Math.ceil(rewardBase * state.contractEffects.rewardMult);
   state.money += reward;
-  showEntityEffect("격파");
   const dropChance = state.entity.boss ? 1 : 0.25;
   if (Math.random() < dropChance) {
     const card = keywordCardsPool[rand(0, keywordCardsPool.length - 1)];
     state.keywordCards.push(card);
   }
   const wasBoss = state.entity.boss;
+  const wasFinal = wasBoss && state.entity.name === "아키리히치";
+  if (wasBoss) state.bossClearedCount += 1;
   state.entity = null;
   state.currentTargets = [];
   state.nextTargets = [];
   renderAttackPreview();
+  await wait(150);
+  if (wasFinal && state.mode === "스토리 모드") {
+    alert("최종 보스를 격파했습니다! 승리");
+    showTitle();
+    return;
+  }
   if (wasBoss) {
     openContractModal();
     render();
@@ -1502,10 +1770,6 @@ function checkGameOver() {
   const alive = state.board.some((u) => u);
   if (!alive) {
     if (state.mode === "무한 모드") state.records.push({ stage: state.stage });
-    showTitle();
-  }
-  if (state.mode === "스토리 모드" && state.stage > 20) {
-    alert("최종 보스를 격파했습니다! 승리");
     showTitle();
   }
 }
