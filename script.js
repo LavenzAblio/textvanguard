@@ -567,8 +567,9 @@ function renderShop() {
   });
   const closeBtn = $("#close-shop");
   const pickedVanguard = state.shopCards.some((c) => state.shopTaken.has(c.id) && c.type === "vanguard");
+  const ownsVanguard = state.gate.some((c) => c.type === "vanguard") || state.board.some((c) => c);
   if (closeBtn) {
-    closeBtn.disabled = state.initialVanguardNeeded ? !pickedVanguard : !state.shopPicked;
+    closeBtn.disabled = state.initialVanguardNeeded ? !pickedVanguard : !(state.shopPicked || ownsVanguard);
   }
 }
 
@@ -1175,7 +1176,9 @@ function closeShopLayer() {
     }
   }
   if (state.pendingSpawn && !state.shopPicked) {
-    return;
+    const ownsVanguard = state.gate.some((c) => c.type === "vanguard") || state.board.some((c) => c);
+    if (!ownsVanguard) return;
+    state.shopPicked = true;
   }
   $("#shop-layer").classList.add("hidden");
   if (state.pendingSpawn && !state.restStage) {
