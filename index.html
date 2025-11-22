@@ -49,6 +49,10 @@
         <section class="board" aria-label="3x3 전장" id="board"></section>
         <aside class="sidebar">
           <div class="card-slot">
+            <h3>계약</h3>
+            <div id="contracts" class="card-list compact scroll"></div>
+          </div>
+          <div class="card-slot">
             <h3>게이트</h3>
             <div id="gate" class="card-list scroll"></div>
           </div>
@@ -75,6 +79,16 @@
         </header>
         <div id="shop-cards" class="card-list scroll"></div>
       </section>
+    </section>
+    <section id="contract-screen" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <header class="panel-header">
+          <h3>보스 계약 선택</h3>
+          <button id="skip-contract">선택하지 않기</button>
+        </header>
+        <p class="muted">강력한 버프와 함께 디버프도 적용됩니다. 한 개를 선택하세요.</p>
+        <div id="contract-choices" class="card-list"></div>
+      </div>
     </section>
   </main>
 

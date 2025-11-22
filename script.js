@@ -6,6 +6,53 @@ const nameFragments = [
   "란", "뷅", "잉", "기", "슝", "딩", "무", "톤", "아", "리", "히", "치", "카", "로", "메", "탄",
 ];
 const tribes = ["인간", "짐승", "기계", "정령", "괴물", "저주"];
+const contractPool = [
+  {
+    name: "피의 서약",
+    buff: "아군 피해 +20%",
+    debuff: "모든 뱅가드 최대 체력 -10%",
+    apply(stateRef) {
+      stateRef.contractEffects.allyDamage += 0.2;
+      adjustAlliesHp(stateRef, 0.9);
+    },
+  },
+  {
+    name: "집념의 서약",
+    buff: "크리티컬 확률 +10%",
+    debuff: "택틱 비용 +20%",
+    apply(stateRef) {
+      stateRef.contractEffects.allyCrit += 0.1;
+      stateRef.contractEffects.tacticCostMult *= 1.2;
+    },
+  },
+  {
+    name: "돌격의 서약",
+    buff: "최전방 뱅가드 피해 +25%",
+    debuff: "이동 비용 +2",
+    apply(stateRef) {
+      stateRef.contractEffects.frontDamage += 0.25;
+      stateRef.contractEffects.moveCostFlat += 2;
+    },
+  },
+  {
+    name: "인내의 서약",
+    buff: "적이 주는 피해 -15%",
+    debuff: "획득 자금 -10%",
+    apply(stateRef) {
+      stateRef.contractEffects.enemyDamageTaken -= 0.15;
+      stateRef.contractEffects.rewardMult *= 0.9;
+    },
+  },
+  {
+    name: "도박사의 서약",
+    buff: "초기 소환 카드 비용 -15%",
+    debuff: "재소환 비용 +1",
+    apply(stateRef) {
+      stateRef.contractEffects.shopCostMult *= 0.85;
+      stateRef.contractEffects.rerollFlat += 1;
+    },
+  },
+];
 const keywords = {
   전사의심장: (unit) => (unit.hp <= unit.maxHp / 2 ? { atk: 0.2 } : {}),
   마법의심장: (unit) => (unit.hp <= unit.maxHp / 2 ? { satk: 0.2 } : {}),
@@ -50,6 +97,8 @@ const state = {
   gate: [],
   hand: [],
   keywordCards: [],
+  contracts: [],
+  contractChoices: [],
   shopCards: [],
   rerollCost: 5,
   log: [],
@@ -58,6 +107,17 @@ const state = {
   stageBuff: { damage: 0 },
   entity: null,
   sacrificeMode: false,
+  contractEffects: {
+    allyDamage: 0,
+    allyCrit: 0,
+    frontDamage: 0,
+    enemyDamageTaken: 0,
+    moveCostFlat: 0,
+    tacticCostMult: 1,
+    rewardMult: 1,
+    shopCostMult: 1,
+    rerollFlat: 0,
+  },
 };
 
 function rand(min, max) {
@@ -75,6 +135,16 @@ function randomTribe() {
   const count = Math.random() < 0.12 ? 2 : 1;
   const shuffled = [...tribes].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
+}
+
+function adjustAlliesHp(stateRef, multiplier) {
+  const apply = (unit) => {
+    const newMax = Math.max(1, Math.ceil(unit.maxHp * multiplier));
+    unit.maxHp = newMax;
+    unit.hp = Math.min(unit.hp, newMax);
+  };
+  stateRef.board.filter(Boolean).forEach(apply);
+  stateRef.gate.filter(Boolean).forEach(apply);
 }
 
 function calcRole(unit) {
@@ -121,6 +191,20 @@ function createTactic() {
   return { ...base, id: crypto.randomUUID(), type: "tactic" };
 }
 
+function getTacticCost(card) {
+  return Math.max(1, Math.ceil(card.cost * state.contractEffects.tacticCostMult));
+}
+
+function getRerollCost() {
+  return Math.max(1, Math.ceil(state.rerollCost + state.contractEffects.rerollFlat));
+}
+
+function applyShopCost(card) {
+  const copy = { ...card };
+  copy.cost = Math.max(1, Math.ceil(copy.cost * state.contractEffects.shopCostMult));
+  return copy;
+}
+
 function createShopCards(forceVanguard = false) {
   let cards = [];
   let vanguardCount = 0;
@@ -138,7 +222,8 @@ function createShopCards(forceVanguard = false) {
       }
     }
   }
-  return cards.filter((card) => (card.type === "tactic" ? true : card.cost <= state.money * 1.5));
+  const adjusted = cards.map((card) => applyShopCost(card));
+  return adjusted.filter((card) => (card.type === "tactic" ? true : card.cost <= state.money * 1.5));
 }
 
 function renderShop() {
@@ -147,6 +232,51 @@ function renderShop() {
   const wrap = $("#shop-cards");
   wrap.innerHTML = "";
   state.shopCards.forEach((card) => wrap.appendChild(renderCard(card, () => buyCard(card))));
+}
+
+function pickContracts() {
+  const shuffled = [...contractPool].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 4);
+}
+
+function renderContractChoices() {
+  const wrap = $("#contract-choices");
+  wrap.innerHTML = "";
+  state.contractChoices.forEach((c) => {
+    const el = document.createElement("article");
+    el.className = "card";
+    el.innerHTML = `
+      <div class="cost">버프</div>
+      <h4>${c.name}</h4>
+      <p class="muted">${c.buff}</p>
+      <p class="muted">${c.debuff}</p>
+    `;
+    const btn = document.createElement("button");
+    btn.textContent = "체결";
+    btn.addEventListener("click", () => chooseContract(c));
+    el.appendChild(btn);
+    wrap.appendChild(el);
+  });
+}
+
+function openContractModal() {
+  state.contractChoices = pickContracts();
+  renderContractChoices();
+  $("#contract-screen").classList.remove("hidden");
+}
+
+function closeContractModal() {
+  $("#contract-screen").classList.add("hidden");
+  state.contractChoices = [];
+}
+
+function chooseContract(contract) {
+  contract.apply(state);
+  state.contracts.push(contract);
+  log(`계약 '${contract.name}' 체결: ${contract.buff} / ${contract.debuff}`);
+  closeContractModal();
+  advanceStage();
+  render();
 }
 
 function renderCards(container, cards, onClick) {
@@ -164,8 +294,10 @@ function renderCard(card, onClick) {
     onClick(card);
   });
 
+  const shownCost = card.type === "tactic" ? getTacticCost(card) : card.cost;
+
   el.innerHTML = `
-    <div class="cost">$${card.cost}</div>
+    <div class="cost">$${shownCost}</div>
     <h4>${card.name}</h4>
     <div class="muted">${card.type === "tactic" ? "택틱" : `${card.role} · 사거리 ${card.range}`}</div>
     ${card.tribes ? `<div class="row"><span class="stat">종족: ${card.tribes.join(", ")}</span></div>` : ""}
@@ -200,6 +332,8 @@ function resetState(mode) {
     gate: [],
     hand: [],
     keywordCards: [],
+    contracts: [],
+    contractChoices: [],
     shopCards: createShopCards(true),
     rerollCost: 5,
     log: [],
@@ -207,6 +341,17 @@ function resetState(mode) {
     sacrificeMode: false,
     turnBuff: { damage: 0, crit: 0, shieldFront: false },
     stageBuff: { damage: 0 },
+    contractEffects: {
+      allyDamage: 0,
+      allyCrit: 0,
+      frontDamage: 0,
+      enemyDamageTaken: 0,
+      moveCostFlat: 0,
+      tacticCostMult: 1,
+      rewardMult: 1,
+      shopCostMult: 1,
+      rerollFlat: 0,
+    },
   });
   log(`${mode} 시작! 소환으로 첫 뱅가드를 확보하세요.`);
   summon(true);
@@ -237,7 +382,27 @@ function render() {
   renderCards($("#gate"), state.gate, (card) => placeFromGate(card));
   renderCards($("#hand"), state.hand, (card) => playTactic(card));
   renderCards($("#keyword-cards"), state.keywordCards, (card) => applyKeyword(card));
+  renderContracts();
   $("#shop-money").textContent = `$${state.money}`;
+}
+
+function renderContracts() {
+  const wrap = $("#contracts");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  if (state.contracts.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "muted";
+    empty.textContent = "아직 체결된 계약이 없습니다.";
+    wrap.appendChild(empty);
+    return;
+  }
+  state.contracts.forEach((c) => {
+    const el = document.createElement("article");
+    el.className = "card mini";
+    el.innerHTML = `<h4>${c.name}</h4><p class="muted">${c.buff}</p><p class="muted">${c.debuff}</p>`;
+    wrap.appendChild(el);
+  });
 }
 
 function buyCard(card) {
@@ -256,11 +421,12 @@ function summon(forceVanguard = false) {
 }
 
 function reroll() {
-  if (state.money < state.rerollCost) return alert("재소환 비용 부족");
-  state.money -= state.rerollCost;
+  const cost = getRerollCost();
+  if (state.money < cost) return alert("재소환 비용 부족");
+  state.money -= cost;
   state.rerollCost = Math.ceil(state.rerollCost * 1.25 + 1);
   summon();
-  log(`재소환! 새로운 카드 6장 등장. 비용은 이제 $${state.rerollCost}`);
+  log(`재소환! 새로운 카드 6장 등장. 비용은 이제 $${getRerollCost()}`);
   render();
 }
 
@@ -292,7 +458,7 @@ function moveUnit(idx) {
   const neighbors = [idx - 3, idx + 3, idx % 3 !== 0 ? idx - 1 : null, idx % 3 !== 2 ? idx + 1 : null].filter((i) => i >= 0 && i < 9);
   const target = neighbors.find((i) => !state.board[i]);
   if (target == null) return alert("인접 칸이 없습니다.");
-  const cost = 2 + Math.floor(state.stage * 0.2);
+  const cost = Math.ceil(2 + Math.floor(state.stage * 0.2) + state.contractEffects.moveCostFlat);
   if (state.money < cost) return alert("이동 비용 부족");
   state.money -= cost;
   state.board[target] = state.board[idx];
@@ -302,8 +468,9 @@ function moveUnit(idx) {
 }
 
 function playTactic(card) {
-  if (state.money < card.cost) return alert("자금 부족");
-  state.money -= card.cost;
+  const cost = getTacticCost(card);
+  if (state.money < cost) return alert("자금 부족");
+  state.money -= cost;
   card.effect(state);
   state.hand = state.hand.filter((c) => c.id !== card.id);
   log(`택틱 ${card.name} 사용.`);
@@ -366,8 +533,8 @@ function spawnEntity() {
   log(`${state.entity.boss ? "보스" : "엔티티"} ${state.entity.name} 등장! 위협력 ${state.entity.threat}`);
 }
 
-function calculateDamage(unit, entity) {
-  const critChance = 0.05 + (unit.tempBonus ? 0.1 : 0) + state.turnBuff.crit;
+function calculateDamage(unit, entity, idx = 0) {
+  const critChance = 0.05 + (unit.tempBonus ? 0.1 : 0) + state.turnBuff.crit + state.contractEffects.allyCrit;
   const isCrit = Math.random() < critChance;
   const ultra = !isCrit && Math.random() < 0.01;
   const physical = Math.max(0, unit.atk - entity.def);
@@ -376,7 +543,8 @@ function calculateDamage(unit, entity) {
   if (unit.tempBonus) dmg *= 1 + unit.tempBonus;
   if (unit.keywords.includes("보스슬레이어") && entity.boss) dmg *= 1.2;
   if (unit.keywords.includes("미니언슬레이어") && !entity.boss) dmg *= 1.2;
-  dmg *= 1 + state.turnBuff.damage + state.stageBuff.damage;
+  const frontBonus = idx < 3 ? state.contractEffects.frontDamage : 0;
+  dmg *= 1 + state.turnBuff.damage + state.stageBuff.damage + state.contractEffects.allyDamage + frontBonus;
   dmg = Math.ceil(dmg);
   if (isCrit) dmg *= 2;
   if (ultra) dmg *= 4;
@@ -401,7 +569,8 @@ function entityAttack() {
     }
     const phys = Math.max(0, state.entity.atk - unit.def);
     const mag = Math.max(0, state.entity.satk - unit.sdef);
-    const dmg = Math.ceil(phys + mag);
+    let dmg = Math.ceil(phys + mag);
+    dmg = Math.max(0, Math.ceil(dmg * Math.max(0, 1 + state.contractEffects.enemyDamageTaken)));
     unit.hp -= dmg;
     log(`${state.entity.name}이(가) ${unit.name}에게 ${dmg} 피해.`);
     if (unit.hp <= 0) handleDeath(idx, unit);
@@ -440,7 +609,7 @@ function endTurn() {
   // player attacks first
   state.board.forEach((unit, idx) => {
     if (!unit) return;
-    const dmg = calculateDamage(unit, state.entity);
+    const dmg = calculateDamage(unit, state.entity, idx);
     state.entity.hp -= dmg;
     log(`${unit.name} -> ${state.entity.name}: ${dmg} 피해`);
   });
@@ -466,7 +635,8 @@ function endTurn() {
 }
 
 function onEntityDefeated() {
-  const reward = Math.ceil(6 + state.stage * (state.entity.boss ? 4 : 2));
+  const rewardBase = 6 + state.stage * (state.entity.boss ? 4 : 2);
+  const reward = Math.ceil(rewardBase * state.contractEffects.rewardMult);
   state.money += reward;
   log(`${state.entity.name} 격파! $${reward} 획득.`);
   const dropChance = state.entity.boss ? 1 : 0.25;
@@ -475,7 +645,13 @@ function onEntityDefeated() {
     state.keywordCards.push(card);
     log(`키워드 부여 카드 획득: ${card}`);
   }
+  const wasBoss = state.entity.boss;
   state.entity = null;
+  if (wasBoss) {
+    openContractModal();
+    render();
+    return;
+  }
   advanceStage();
 }
 
@@ -559,6 +735,12 @@ $("#end-turn-btn").addEventListener("click", endTurn);
 $("[data-action='sacrifice']").addEventListener("click", () => {
   state.sacrificeMode = !state.sacrificeMode;
   log(state.sacrificeMode ? "희생 모드 활성화" : "희생 모드 종료");
+});
+$("#skip-contract").addEventListener("click", () => {
+  log("계약을 건너뜀");
+  closeContractModal();
+  advanceStage();
+  render();
 });
 
 renderBoard();
