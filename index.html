@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>텍스트 뱅가드</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main id="app">
+    <section id="title-screen" class="panel screen active">
+      <div class="title-hero">
+        <div class="title-text">
+          <h1>텍스트 뱅가드</h1>
+          <p class="version">Ver. 0.11</p>
+        </div>
+        <div class="title-actions">
+          <div class="title-buttons">
+            <button id="story-btn" class="primary">스토리 모드</button>
+            <button id="endless-btn" class="primary">무한 모드</button>
+            <button id="record-btn">무한 모드 기록</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="record-screen" class="panel screen">
+      <div class="record-hero">
+        <div class="record-wrap">
+          <header class="panel-header">
+            <h2>무한 모드 기록</h2>
+            <button data-action="to-title">메인 타이틀로</button>
+          </header>
+          <ol id="record-list" class="scroll"></ol>
+        </div>
+      </div>
+    </section>
+
+    <section id="game-screen" class="panel screen">
+      <div class="game-shell">
+        <div class="top-band">
+          <div class="stage-column">
+            <div class="stage-hub">
+              <div class="hub-label">현재 스테이지</div>
+              <div id="stage-circle" class="stage-circle">
+                <span id="stage-number">1</span>
+                <div id="stage-type" class="stage-type">일반</div>
+              </div>
+              <div id="stage-cycle" class="stage-cycle-label">일반 스테이지 (1 / 3)</div>
+            </div>
+            <div class="contract-panel">
+              <h3>계약</h3>
+              <div id="active-contracts" class="chip-grid"></div>
+            </div>
+          </div>
+          <div class="entity-column top-entity">
+            <div class="entity-header">
+              <div id="entity-portrait" class="entity-portrait empty">
+                <div class="placeholder">엔티티 없음</div>
+              </div>
+            </div>
+            <div class="attack-preview">
+              <div class="preview-label">이번 공격</div>
+              <div id="attack-now" class="mini-grid"></div>
+              <div class="preview-label next">다음 공격</div>
+              <div id="attack-next" class="mini-grid"></div>
+            </div>
+          </div>
+          <div class="board-column">
+            <div id="entity-inline" class="entity-inline"></div>
+            <div class="board" aria-label="3x3 전장" id="board"></div>
+            <div id="effect-layer" class="effect-layer"></div>
+            <div class="board-controls">
+              <div class="timer">
+                <div id="turn-timer" class="timer-bar"></div>
+              </div>
+              <button id="end-turn-btn" class="accent wide">턴 끝내기</button>
+            </div>
+            <div id="inspect-panel" class="inspect-panel hidden"></div>
+          </div>
+          <div class="gate-stack">
+            <div class="gate-header">
+              <div>
+                <h3>게이트</h3>
+                <p class="muted">카드를 길게 눌러 전장에 배치하거나 택틱을 사용</p>
+              </div>
+              <div class="resource">현재 돈 <strong id="money-label">$0</strong></div>
+            </div>
+            <div id="gate" class="card-stack scroll"></div>
+          </div>
+        </div>
+
+        <div class="footer-row">
+          <div class="footer-info">
+            <span id="card-count">보유 중인 카드 수 0</span>
+          </div>
+          <div class="button-row">
+            <button data-action="to-title">항복</button>
+          </div>
+        </div>
+
+        <div id="keyword-detail" class="keyword-detail hidden">
+          <div class="keyword-detail-title">키워드 설명</div>
+          <div id="keyword-detail-body" class="keyword-detail-body"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="shop-layer" class="overlay hidden" role="dialog" aria-modal="true">
+      <div class="overlay-surface summon-surface">
+        <header class="overlay-header">
+          <h3>소환</h3>
+          <div class="overlay-meta">카드를 클릭해 선택하세요</div>
+        </header>
+        <div id="shop-cards" class="shop-row"></div>
+        <div class="overlay-actions">
+          <button id="close-shop">선택 완료</button>
+          <button id="overlay-reroll" class="primary">재소환</button>
+          <div class="money-box">현재 돈 <span id="shop-money">$0</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contract-layer" class="overlay hidden" role="dialog" aria-modal="true">
+      <div class="overlay-surface contract-surface">
+        <h3>계약 선택</h3>
+        <div id="contract-choices" class="contract-list"></div>
+        <div class="overlay-actions">
+          <button id="skip-contract">선택하지 않기</button>
+          <div class="money-box">현재 돈 <span id="contract-money">$0</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="rest-layer" class="overlay hidden" role="dialog" aria-modal="true">
+      <div class="overlay-surface rest-surface">
+        <h3 class="rest-title">재정비</h3>
+        <div class="rest-body">
+          <div class="rest-column">
+            <div class="rest-header">키워드 부여 카드</div>
+            <div id="rest-keywords" class="rest-list scroll"></div>
+          </div>
+          <div class="rest-arrow">
+            <span>키워드</span>
+            <div class="arrow-shape">➜</div>
+            <span>뱅가드</span>
+          </div>
+          <div class="rest-column wide">
+            <div class="rest-header">게이트</div>
+            <div id="rest-gate" class="rest-grid scroll"></div>
+          </div>
+        </div>
+        <div class="rest-actions">
+          <button id="apply-keyword" class="primary">키워드 부여</button>
+          <button id="finish-rest">재정비 끝내기</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
