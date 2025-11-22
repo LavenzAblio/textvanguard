@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>텍스트 뱅가드</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main id="app">
+    <section id="title-screen" class="panel">
+      <h1>텍스트 뱅가드</h1>
+      <p class="subtitle">3x3 전장에서 뱅가드를 지휘하는 로그라이크 덱빌딩</p>
+      <div class="button-row">
+        <button id="story-btn" class="primary">스토리 모드</button>
+        <button id="endless-btn" class="primary">무한 모드</button>
+      </div>
+      <div class="button-row">
+        <button id="record-btn">무한 모드 기록</button>
+        <button id="option-btn">옵션</button>
+      </div>
+    </section>
+
+    <section id="record-screen" class="panel hidden">
+      <header class="panel-header">
+        <h2>무한 모드 기록</h2>
+        <button data-action="to-title">메인 타이틀로</button>
+      </header>
+      <ol id="record-list" class="scroll"></ol>
+    </section>
+
+    <section id="game-screen" class="panel hidden">
+      <header class="panel-header">
+        <div>
+          <strong id="mode-label"></strong>
+          <span id="stage-label" class="pill"></span>
+          <span id="cycle-label" class="pill"></span>
+          <span id="money-label" class="pill"></span>
+        </div>
+        <div class="button-row">
+          <button id="summon-btn" class="primary">소환</button>
+          <button id="reroll-btn">재소환</button>
+          <button id="end-turn-btn" class="accent">턴 종료</button>
+          <button data-action="sacrifice" title="배치한 뱅가드를 클릭해 희생">희생 모드</button>
+          <button data-action="to-title">항복</button>
+        </div>
+      </header>
+      <div class="layout">
+        <section class="board" aria-label="3x3 전장" id="board"></section>
+        <aside class="sidebar">
+          <div class="card-slot">
+            <h3>게이트</h3>
+            <div id="gate" class="card-list scroll"></div>
+          </div>
+          <div class="card-slot">
+            <h3>핸드 (턴에 사용할 카드)</h3>
+            <div id="hand" class="card-list scroll"></div>
+          </div>
+          <div class="card-slot">
+            <h3>키워드 부여 카드</h3>
+            <div id="keyword-cards" class="card-list scroll"></div>
+          </div>
+          <div class="card-slot">
+            <h3>로그</h3>
+            <pre id="log" class="log scroll"></pre>
+          </div>
+        </aside>
+      </div>
+
+      <section id="shop" class="shop hidden">
+        <header class="panel-header">
+          <h3>소환</h3>
+          <span>현재 자금: <strong id="shop-money"></strong></span>
+          <button id="close-shop">닫기</button>
+        </header>
+        <div id="shop-cards" class="card-list scroll"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
