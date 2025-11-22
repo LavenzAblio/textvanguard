@@ -557,10 +557,11 @@ function renderShop() {
     clickAny: true,
   });
   const closeBtn = $("#close-shop");
-  const pickedVanguard = state.shopCards.some((c) => state.shopTaken.has(c.id) && c.type === "vanguard");
+  const pickedVanguardCount = state.shopCards.filter((c) => state.shopTaken.has(c.id) && c.type === "vanguard").length;
   const ownsVanguard = state.gate.some((c) => c.type === "vanguard") || state.board.some((c) => c);
+  const canLeave = pickedVanguardCount > 0 || ownsVanguard;
   if (closeBtn) {
-    closeBtn.disabled = state.initialVanguardNeeded ? !pickedVanguard : !(state.shopPicked || ownsVanguard);
+    closeBtn.disabled = !canLeave;
   }
 }
 
@@ -1176,12 +1177,8 @@ function closeShopLayer() {
     return;
   }
 
-  if (pickedVanguardCount > 0) {
+  if (pickedVanguardCount > 0 || ownsVanguard) {
     state.initialVanguardNeeded = false;
-    state.shopPicked = true;
-  }
-
-  if (state.pendingSpawn && !state.shopPicked && ownsVanguard) {
     state.shopPicked = true;
   }
   if (state.pendingSpawn && !state.shopPicked) return;

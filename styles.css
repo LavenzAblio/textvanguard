@@ -112,8 +112,8 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .title-text {
   position: absolute;
-  top: 52px;
-  left: 52px;
+  top: 28px;
+  left: 28px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -122,8 +122,8 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .title-text .version { font-size: 1.4rem; color: #2563eb; font-weight: 700; }
 .title-buttons {
   position: absolute;
-  right: 52px;
-  bottom: 52px;
+  right: 28px;
+  bottom: 28px;
   display: grid;
   gap: 18px;
   width: 260px;
@@ -178,6 +178,7 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .title-text h1 { font-size: 3.4rem; }
 
 .game-shell { display: flex; flex-direction: column; gap: 16px; height: 100%; }
+.game-shell { max-width: 1500px; margin: 0 auto; padding: 0 28px; }
 .top-band {
   display: grid;
   grid-template-columns: 0.9fr 1.1fr 1.7fr;
