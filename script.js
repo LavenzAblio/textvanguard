@@ -495,16 +495,14 @@ function applyShopCost(card) {
 }
 
 function createShopCards(forceVanguard = false) {
-  let cards = [];
-  let vanguardCount = 0;
-  const seen = new Set();
-  while (cards.length === 0 || (forceVanguard && vanguardCount === 0)) {
-    cards = [];
-    vanguardCount = 0;
-    seen.clear();
+  let attempts = 0;
+  while (attempts < 6) {
+    let cards = [];
+    let vanguardCount = 0;
+    const seen = new Set();
     for (let i = 0; i < 6; i++) {
       const roll = Math.random();
-      const isVanguard = roll < 0.6 || (forceVanguard && vanguardCount === 0 && i === 5);
+      const isVanguard = roll < 0.6 || (forceVanguard && vanguardCount === 0 && i >= 4);
       const card = isVanguard ? createVanguard(state.stage) : createTactic();
       const key = `${card.type}-${card.name}`;
       if (seen.has(key)) {
@@ -515,19 +513,34 @@ function createShopCards(forceVanguard = false) {
       cards.push(card);
       if (isVanguard) vanguardCount++;
     }
+
+    if (forceVanguard && vanguardCount === 0) {
+      attempts++;
+      continue;
+    }
+
+    const adjusted = cards.map((card) => applyShopCost(card));
+    const vanguards = adjusted.filter((c) => c.type === "vanguard");
+    if (forceVanguard && vanguards.length) {
+      const cheapest = vanguards.slice().sort((a, b) => a.cost - b.cost)[0];
+      if (cheapest && cheapest.cost > state.money * 1.8) {
+        cheapest.cost = Math.max(1, Math.ceil(state.money * 0.9));
+      }
+    }
+
+    let filtered = adjusted.filter((card) => (card.type === "tactic" ? true : card.cost <= state.money * 1.8));
+    if (forceVanguard && filtered.every((c) => c.type !== "vanguard") && vanguards.length) {
+      filtered = [vanguards[0], ...filtered.filter((c) => c.type !== "vanguard")];
+    }
+    if (filtered.length === 0) filtered = adjusted;
+    const affordable = filtered.filter((c) => c.cost <= state.money);
+    if (affordable.length === 0) {
+      const cheapest = filtered.slice().sort((a, b) => a.cost - b.cost)[0];
+      if (cheapest) cheapest.cost = Math.max(1, Math.ceil(Math.max(state.money, cheapest.cost * 0.75)));
+    }
+    return filtered;
   }
-  const adjusted = cards.map((card) => applyShopCost(card));
-  let filtered = adjusted.filter((card) => (card.type === "tactic" ? true : card.cost <= state.money * 1.8));
-  if (forceVanguard && filtered.every((c) => c.type !== "vanguard")) {
-    return createShopCards(forceVanguard);
-  }
-  if (filtered.length === 0) filtered = adjusted;
-  const affordable = filtered.filter((c) => c.cost <= state.money);
-  if (affordable.length === 0) {
-    const cheapest = filtered.slice().sort((a, b) => a.cost - b.cost)[0];
-    if (cheapest) cheapest.cost = Math.max(1, Math.ceil(Math.max(state.money, cheapest.cost * 0.75)));
-  }
-  return filtered;
+  return [];
 }
 
 function renderShop() {
