@@ -3,7 +3,22 @@ const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
 const nameFragments = [
-  "란", "뷅", "잉", "기", "슝", "딩", "무", "톤", "아", "리", "히", "치", "카", "로", "메", "탄",
+  "기", "르", "크", "마", "빈", "터", "빅", "워", "일", "리", "아", "어", "이", "렐", "비", "루", "로", "라", "메",
+  "모", "몰", "바", "칸", "켄", "세", "스", "탄", "벨", "말", "파", "트", "겐", "즈", "조", "얼", "슈", "멘", "타",
+  "커", "소", "수", "키", "페", "무", "벡", "잔", "슨", "센", "자", "지", "보", "레", "넌", "리엘", "론", "릴", "렘",
+  "렌", "링", "로스", "룬", "라크", "라스", "로크", "루크", "람", "란", "리안", "레온", "로안", "리스", "로드", "라일",
+  "랑", "렉", "르크", "룩", "렉스", "르스", "린", "렌", "림", "룸", "렁", "발", "벅", "벱", "벡", "브렌", "봄",
+  "볼", "반", "벼", "벽", "바스", "브락", "브롤", "백스", "보르", "벤", "베온", "비엘", "보안", "브락스", "브론",
+  "브릭", "브렉", "빈트", "빌", "벨", "벨크", "잔", "젠", "족", "제르", "조안", "증", "진스", "젤", "조크", "줄",
+  "존", "젠트", "족스", "잘", "즈렌", "제바", "제온", "제프", "조알", "칸", "켄", "켈", "킨", "킥", "크스", "캘",
+  "캔", "케프", "코르", "콜", "콕", "콩", "칼", "카브", "컥", "큼", "쿠르", "켄트", "칵", "켁", "켐", "콘",
+  "케온", "콘스", "콕스", "콘트", "탈", "텐", "톤", "틸", "틱", "트스", "텔", "테프", "톡", "톨", "톤스", "타르",
+  "토브", "티엔", "택스", "타크", "텐트", "톨크", "타브", "파", "펜", "폴", "픽", "프렌", "판", "팔", "포르",
+  "패스", "포익", "폴트", "팩스", "팜", "프릴", "포안", "프록", "멘", "먼", "멜", "몬", "몰", "맥", "맨", "맘",
+  "믄", "멘스", "멜크", "멘트", "슈", "실", "셀", "숀", "숀트", "속", "스크", "스텔", "스탄", "스록", "스몬",
+  "스브", "스렌", "스톤", "커", "켠", "켜", "케르", "코스", "컽", "케온", "컬크", "켈트", "커브", "컨트", "케브",
+  "콘트", "쿠스", "겔", "겐", "글", "고르", "그렌", "그렉", "골트", "그란", "델", "던", "돌", "닐", "님", "넨",
+  "넬", "닉", "네프", "논", "넥스", "낙", "낟", "낚", "워", "위엘", "윈", "웬", "웰", "원", "웅", "웁", "웁스",
 ];
 const tribes = ["인간", "짐승", "기계", "정령", "괴물", "저주"];
 const contractPool = [
@@ -208,18 +223,23 @@ function applyShopCost(card) {
 function createShopCards(forceVanguard = false) {
   let cards = [];
   let vanguardCount = 0;
+  const seen = new Set();
   while (cards.length === 0 || (forceVanguard && vanguardCount === 0)) {
     cards = [];
     vanguardCount = 0;
+    seen.clear();
     for (let i = 0; i < 6; i++) {
       const roll = Math.random();
       const isVanguard = roll < 0.6 || (forceVanguard && vanguardCount === 0 && i === 5);
-      if (isVanguard) {
-        cards.push(createVanguard(state.stage));
-        vanguardCount++;
-      } else {
-        cards.push(createTactic());
+      const card = isVanguard ? createVanguard(state.stage) : createTactic();
+      const key = `${card.type}-${card.name}`;
+      if (seen.has(key)) {
+        i -= 1;
+        continue;
       }
+      seen.add(key);
+      cards.push(card);
+      if (isVanguard) vanguardCount++;
     }
   }
   const adjusted = cards.map((card) => applyShopCost(card));
@@ -702,6 +722,8 @@ function updateRecords() {
 
 function showTitle() {
   $$(".panel").forEach((p) => p.classList.add("hidden"));
+  $("#contract-screen").classList.add("hidden");
+  $("#shop").classList.add("hidden");
   $("#title-screen").classList.remove("hidden");
 }
 
