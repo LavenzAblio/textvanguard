@@ -38,6 +38,7 @@ main#app {
   height: 100vh;
   padding: 0;
   position: relative;
+  display: block;
 }
 
 .panel {
@@ -75,8 +76,13 @@ main#app {
 #game-screen.panel {
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
   overflow: hidden;
   padding: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
 }
 
 .hidden { display: none !important; }
@@ -128,17 +134,12 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   z-index: 50;
 }
 .title-buttons {
-  position: fixed;
-  right: 28px;
-  left: auto;
-  bottom: 28px;
   display: flex;
   flex-direction: column;
   gap: 18px;
   width: 260px;
   justify-content: flex-start;
   align-items: stretch;
-  z-index: 50;
 }
 #record-screen.panel {
   display: flex;
