@@ -439,13 +439,6 @@ function adjustAlliesHp(stateRef, multiplier) {
   stateRef.gate.filter(Boolean).forEach(apply);
 }
 
-function calcRole(unit) {
-  const atkSum = unit.atk + unit.satk;
-  if (atkSum > unit.def + unit.sdef + 5) return "후방";
-  if (unit.hp > unit.atk + unit.satk) return "전방";
-  return "중간";
-}
-
 function rollKeywords() {
   const list = Object.keys(keywords);
   const count = Math.random() < 0.25 ? 2 : Math.random() < 0.6 ? 1 : 0;
@@ -468,12 +461,10 @@ function createVanguard(stage, guaranteedKeyword) {
     satk: base + rand(-10, 12),
     sdef: base * 0.95 + rand(-8, 10),
     keywords: rollKeywords(),
-    role: "중간",
     cost: 0,
   };
   if (guaranteedKeyword) unit.keywords.push(guaranteedKeyword);
   unit.maxHp = Math.max(1, Math.ceil(unit.hp));
-  unit.role = calcRole(unit);
   const power =
     unit.hp * 0.9 +
     unit.atk +
@@ -661,7 +652,7 @@ function renderCard(card, onClick, options = {}) {
   const el = document.createElement("article");
   el.className = `card ${compact ? "mini" : ""} ${selected ? "rest-selected" : ""} ${disabled ? "disabled" : ""}`;
   const shownCost = clean.type === "tactic" ? getTacticCost(clean) : clean.cost;
-  const label = clean.type === "tactic" ? "택틱" : clean.type === "keyword" ? "키워드" : `${clean.role} · 사거리 ${clean.range}`;
+  const label = clean.type === "tactic" ? "택틱" : clean.type === "keyword" ? "키워드" : `사거리 ${clean.range}`;
 
   el.innerHTML = `
     ${showCost && clean.cost ? `<div class="cost">$${shownCost}</div>` : ""}
@@ -843,7 +834,7 @@ function renderBoard() {
     cell.className = "cell";
     cell.dataset.idx = idx;
     cell.innerHTML = unit
-      ? `<div><strong>${unit.name}</strong><div class="muted">${unit.hp}/${unit.maxHp}</div></div><span class="tag">${unit.role}</span>`
+      ? `<div><strong>${unit.name}</strong><div class="muted">${unit.hp}/${unit.maxHp}</div></div>`
       : "";
     cell.addEventListener("click", (e) => onCellClick(e, cell, idx));
     cell.addEventListener("pointerdown", () => {
@@ -898,9 +889,15 @@ function showInspect(target) {
           <span class="stat">특공 ${target.satk}</span>
           <span class="stat">특방 ${target.sdef}</span></div>`
       : "";
+  const descLabel =
+    target.type === "tactic"
+      ? "택틱"
+      : target.range
+      ? `사거리 ${target.range}`
+      : "";
   panel.innerHTML = `
     <strong>${target.name || target.title || target.type}</strong>
-    <div class="muted">${target.type === "tactic" ? "택틱" : target.role ? `${target.role} · 사거리 ${target.range}` : ""}</div>
+    <div class="muted">${descLabel}</div>
     ${target.tribes ? `<div class="row"><span class="stat">종족: ${target.tribes.join(", ")}</span></div>` : ""}
     ${stats}
     ${target.text ? `<p class="muted">${target.text}</p>` : ""}
@@ -1163,23 +1160,32 @@ function reroll() {
 }
 
 function closeShopLayer() {
-  const pickedVanguard = state.shopCards.some((c) => state.shopTaken.has(c.id) && c.type === "vanguard");
-  if (state.initialVanguardNeeded && !pickedVanguard) {
+  const pickedVanguardCount = state.shopCards.filter((c) => state.shopTaken.has(c.id) && c.type === "vanguard").length;
+  const ownsVanguard =
+    pickedVanguardCount > 0 || state.gate.some((c) => c.type === "vanguard") || state.board.some((c) => c);
+
+  if (state.initialVanguardNeeded && !ownsVanguard) {
     const cheapest = state.shopCards
       .filter((c) => c.type === "vanguard" && !state.shopTaken.has(c.id))
       .sort((a, b) => a.cost - b.cost)[0];
     if (cheapest && cheapest.cost > state.money) cheapest.cost = Math.max(1, Math.ceil(state.money));
     if (cheapest && state.money >= cheapest.cost) {
       toggleShopCard(cheapest);
-    } else {
-      return;
+      return closeShopLayer();
     }
+    return;
   }
-  if (state.pendingSpawn && !state.shopPicked) {
-    const ownsVanguard = state.gate.some((c) => c.type === "vanguard") || state.board.some((c) => c);
-    if (!ownsVanguard) return;
+
+  if (pickedVanguardCount > 0) {
+    state.initialVanguardNeeded = false;
     state.shopPicked = true;
   }
+
+  if (state.pendingSpawn && !state.shopPicked && ownsVanguard) {
+    state.shopPicked = true;
+  }
+  if (state.pendingSpawn && !state.shopPicked) return;
+
   $("#shop-layer").classList.add("hidden");
   if (state.pendingSpawn && !state.restStage) {
     spawnEntity();
