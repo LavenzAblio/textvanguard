@@ -404,6 +404,13 @@ function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+function ceilStats(unit) {
+  ["hp", "maxHp", "atk", "def", "satk", "sdef", "cost"].forEach((k) => {
+    if (unit[k] !== undefined) unit[k] = Math.ceil(unit[k]);
+  });
+  return unit;
+}
+
 function randomName(type = "ally") {
   const len =
     type === "enemy"
@@ -447,19 +454,19 @@ function rollKeywords() {
 }
 
 function createVanguard(stage, guaranteedKeyword) {
-  const variance = 1 + Math.random() * 0.3;
-  const base = (12 + Math.ceil(stage * 1.2)) * variance;
+  const variance = 1 + Math.random() * 0.55;
+  const base = Math.ceil((16 + stage * 1.7) * variance);
   const unit = {
     id: uuid(),
     name: randomName("ally"),
     tribes: randomTribe(),
     range: rand(1, 3),
-    hp: base * 1.15 + rand(-6, 10),
+    hp: base * 1.25 + rand(-8, 14),
     maxHp: 0,
-    atk: base + rand(-6, 8),
-    def: base * 0.9 + rand(-5, 7),
-    satk: base + rand(-6, 8),
-    sdef: base * 0.9 + rand(-5, 7),
+    atk: base + rand(-10, 12),
+    def: base * 0.95 + rand(-8, 10),
+    satk: base + rand(-10, 12),
+    sdef: base * 0.95 + rand(-8, 10),
     keywords: rollKeywords(),
     role: "중간",
     cost: 0,
@@ -468,9 +475,16 @@ function createVanguard(stage, guaranteedKeyword) {
   unit.maxHp = Math.max(1, Math.ceil(unit.hp));
   unit.role = calcRole(unit);
   const power =
-    unit.hp * 0.8 + unit.atk + unit.satk + unit.def + unit.sdef + unit.range * 3 + unit.keywords.length * 10 + stage * 4;
-  unit.cost = Math.max(4, Math.ceil(power / 7 + stage * 0.6));
-  return unit;
+    unit.hp * 0.9 +
+    unit.atk +
+    unit.satk +
+    unit.def +
+    unit.sdef +
+    unit.range * 3 +
+    unit.keywords.length * 12 +
+    stage * 5.2;
+  unit.cost = Math.max(4, Math.ceil(power / 7 + stage * 0.8));
+  return ceilStats(unit);
 }
 
 function createTactic() {
@@ -637,25 +651,29 @@ function renderCard(card, onClick, options = {}) {
     clickAny = false,
     tacticOnlyClick = false,
   } = options;
+  const clean = { ...card };
+  ["hp", "maxHp", "atk", "def", "satk", "sdef", "cost"].forEach((k) => {
+    if (clean[k] !== undefined) clean[k] = Math.ceil(clean[k]);
+  });
   const el = document.createElement("article");
   el.className = `card ${compact ? "mini" : ""} ${selected ? "rest-selected" : ""} ${disabled ? "disabled" : ""}`;
-  const shownCost = card.type === "tactic" ? getTacticCost(card) : card.cost;
-  const label = card.type === "tactic" ? "택틱" : card.type === "keyword" ? "키워드" : `${card.role} · 사거리 ${card.range}`;
+  const shownCost = clean.type === "tactic" ? getTacticCost(clean) : clean.cost;
+  const label = clean.type === "tactic" ? "택틱" : clean.type === "keyword" ? "키워드" : `${clean.role} · 사거리 ${clean.range}`;
 
   el.innerHTML = `
-    ${showCost && card.cost ? `<div class="cost">$${shownCost}</div>` : ""}
-    <h4>${card.name}</h4>
+    ${showCost && clean.cost ? `<div class="cost">$${shownCost}</div>` : ""}
+    <h4>${clean.name}</h4>
     <div class="muted">${label}</div>
-    ${card.tribes ? `<div class="row"><span class="stat">종족: ${card.tribes.join(", ")}</span></div>` : ""}
-    ${card.atk !== undefined ? `<div class="row">
-      <span class="stat">체력 ${card.hp}/${card.maxHp ?? card.hp}</span>
-      <span class="stat">물공 ${card.atk}</span>
-      <span class="stat">물방 ${card.def}</span>
-      <span class="stat">특공 ${card.satk}</span>
-      <span class="stat">특방 ${card.sdef}</span>
+    ${clean.tribes ? `<div class="row"><span class="stat">종족: ${clean.tribes.join(", ")}</span></div>` : ""}
+    ${clean.atk !== undefined ? `<div class="row">
+      <span class="stat">체력 ${clean.hp}/${clean.maxHp ?? clean.hp}</span>
+      <span class="stat">물공 ${clean.atk}</span>
+      <span class="stat">물방 ${clean.def}</span>
+      <span class="stat">특공 ${clean.satk}</span>
+      <span class="stat">특방 ${clean.sdef}</span>
     </div>` : ""}
-    ${card.text ? `<p class="muted">${card.text}</p>` : ""}
-    <div class="row">${(card.keywords || []).map((k) => `<span class="keyword">${k}</span>`).join("")}</div>
+    ${clean.text ? `<p class="muted">${clean.text}</p>` : ""}
+    <div class="row">${(clean.keywords || []).map((k) => `<span class="keyword">${k}</span>`).join("")}</div>
   `;
 
   el.addEventListener("click", (e) => {
@@ -1134,7 +1152,15 @@ function reroll() {
 function closeShopLayer() {
   const pickedVanguard = state.shopCards.some((c) => state.shopTaken.has(c.id) && c.type === "vanguard");
   if (state.initialVanguardNeeded && !pickedVanguard) {
-    return;
+    const cheapest = state.shopCards
+      .filter((c) => c.type === "vanguard" && !state.shopTaken.has(c.id))
+      .sort((a, b) => a.cost - b.cost)[0];
+    if (cheapest && cheapest.cost > state.money) cheapest.cost = Math.max(1, Math.ceil(state.money));
+    if (cheapest && state.money >= cheapest.cost) {
+      buyCard(cheapest);
+    } else {
+      return;
+    }
   }
   if (state.pendingSpawn && !state.shopPicked) {
     return;
@@ -1192,7 +1218,7 @@ function onCellClick(event, cell, idx) {
 function moveUnitTo(fromIdx, targetIdx) {
   if (targetIdx == null || fromIdx === targetIdx) return;
   if (!isAdjacent(fromIdx, targetIdx)) return;
-  const cost = Math.ceil(3 + Math.floor(state.stage * 0.35) + state.contractEffects.moveCostFlat);
+  const cost = Math.ceil(3 + state.stage * 0.35 + state.contractEffects.moveCostFlat);
   if (state.money < cost) return;
   state.money -= cost;
   const temp = state.board[targetIdx];
@@ -1243,13 +1269,13 @@ function applyKeywordToCard(keyword, card) {
 
 function spawnEntity() {
   const isBoss = state.stageInCycle === 4;
-  const base = (14 + Math.ceil(state.stage * 1.9)) * (1 + Math.random() * 0.25);
-  const hp = isBoss ? base * 7 + rand(0, Math.ceil(base * 0.8)) : base * 5 + rand(0, Math.ceil(base * 0.6));
-  const atk = isBoss ? base * 0.55 + rand(0, Math.ceil(base * 0.2)) : base * 0.42 + rand(0, Math.ceil(base * 0.15));
-  const satk = isBoss ? base * 0.55 + rand(0, Math.ceil(base * 0.2)) : base * 0.42 + rand(0, Math.ceil(base * 0.15));
-  const def = isBoss ? base * 0.45 + rand(0, Math.ceil(base * 0.12)) : base * 0.35 + rand(0, Math.ceil(base * 0.1));
+  const base = Math.ceil((18 + state.stage * 2.4) * (1 + Math.random() * 0.6));
+  const hp = isBoss ? base * 9 + rand(0, Math.ceil(base * 1.1)) : base * 7 + rand(0, Math.ceil(base * 0.9));
+  const atk = isBoss ? base * 0.32 + rand(0, Math.ceil(base * 0.18)) : base * 0.24 + rand(0, Math.ceil(base * 0.14));
+  const satk = isBoss ? base * 0.32 + rand(0, Math.ceil(base * 0.18)) : base * 0.24 + rand(0, Math.ceil(base * 0.14));
+  const def = isBoss ? base * 0.22 + rand(0, Math.ceil(base * 0.12)) : base * 0.18 + rand(0, Math.ceil(base * 0.1));
   const sdef = def;
-  const threat = isBoss ? 3 + rand(1, 3) : 1 + rand(0, 2);
+  const threat = isBoss ? 4 + rand(1, 3) : 2 + rand(0, 2);
   state.entity = {
     name: isBoss && state.stage === 20 ? "아키리히치" : randomName("enemy"),
     boss: isBoss,
@@ -1362,7 +1388,7 @@ function endTurn() {
 }
 
 function onEntityDefeated() {
-  const rewardBase = 10 + state.stage * (state.entity.boss ? 6 : 3);
+  const rewardBase = 16 + state.stage * (state.entity.boss ? 8 : 5);
   const reward = Math.ceil(rewardBase * state.contractEffects.rewardMult);
   state.money += reward;
   showEntityEffect("격파");
