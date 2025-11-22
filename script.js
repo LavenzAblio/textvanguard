@@ -859,6 +859,7 @@ function render() {
 
   const typeEl = $("#stage-type");
   const stageCircle = $("#stage-number");
+  const stageCycle = $("#stage-cycle");
   stageCircle.textContent = state.stage;
   typeEl.classList.remove("boss", "rest");
   if (state.restStage) {
@@ -869,6 +870,11 @@ function render() {
     typeEl.classList.add("boss");
   } else {
     typeEl.textContent = "일반";
+  }
+  if (stageCycle) {
+    const pos = ((state.stage - 1) % 4) + 1;
+    if (pos === 4) stageCycle.textContent = "보스 스테이지 (4 / 4)";
+    else stageCycle.textContent = `일반 스테이지 (${pos} / 3)`;
   }
 
   renderBoard();
@@ -930,7 +936,6 @@ function renderGate() {
 
 function renderEntityPanel() {
   const portrait = $("#entity-portrait");
-  const info = $("#entity-info");
   const inline = $("#entity-inline");
   if (!portrait) return;
   portrait.innerHTML = "";
@@ -940,7 +945,6 @@ function renderEntityPanel() {
     empty.className = "placeholder";
     empty.textContent = "엔티티 없음";
     portrait.appendChild(empty);
-    if (info) info.innerHTML = `<div class="muted">엔티티 없음</div>`;
     if (inline) inline.innerHTML = "";
     return;
   }
@@ -953,22 +957,6 @@ function renderEntityPanel() {
   meta.innerHTML = `HP ${state.entity.hp}/${state.entity.maxHp}<br/>위협력 ${state.entity.threat}`;
   portrait.appendChild(circle);
   portrait.appendChild(meta);
-
-  const keywordHtml = (state.entity.keywords || []).map((k) => `<span class="keyword">${k}</span>`).join("");
-  if (info) {
-    info.innerHTML = `
-      <div class="entity-name">${state.entity.name}</div>
-      <div class="stat-grid">
-        <div class="stat-chip">체력 ${state.entity.hp}/${state.entity.maxHp}</div>
-        <div class="stat-chip">위협력 ${state.entity.threat}</div>
-        <div class="stat-chip">물공 ${state.entity.atk}</div>
-        <div class="stat-chip">특공 ${state.entity.satk}</div>
-        <div class="stat-chip">물방 ${state.entity.def}</div>
-        <div class="stat-chip">특방 ${state.entity.sdef}</div>
-      </div>
-      <div class="keywords">${keywordHtml || '<span class="muted">키워드 없음</span>'}</div>
-    `;
-  }
   if (inline) {
     inline.innerHTML = `
       <div class="name">${state.entity.name}</div>
@@ -1534,14 +1522,17 @@ function updateRecords() {
     });
 }
 
-function activateScreen(id) {
-  $$(".screen").forEach((p) => {
-    p.classList.toggle("active", p.id === id);
+const screens = ["title-screen", "record-screen", "game-screen"];
+
+function showScreen(id) {
+  screens.forEach((s) => {
+    const el = document.getElementById(s);
+    el.classList.toggle("active", s === id);
   });
 }
 
 function showTitle() {
-  activateScreen("title-screen");
+  showScreen("title-screen");
   $("#contract-layer").classList.add("hidden");
   $("#shop-layer").classList.add("hidden");
   $("#rest-layer").classList.add("hidden");
@@ -1562,17 +1553,17 @@ function showTitle() {
 
 $("#story-btn").addEventListener("click", () => {
   resetState("스토리 모드");
-  activateScreen("game-screen");
+  showScreen("game-screen");
 });
 
 $("#endless-btn").addEventListener("click", () => {
   resetState("무한 모드");
-  activateScreen("game-screen");
+  showScreen("game-screen");
 });
 
 $("#record-btn").addEventListener("click", () => {
   updateRecords();
-  activateScreen("record-screen");
+  showScreen("record-screen");
 });
 
 $$('[data-action="to-title"]').forEach((btn) => btn.addEventListener("click", showTitle));
