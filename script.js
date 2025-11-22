@@ -1529,6 +1529,10 @@ function showScreen(id) {
     const el = document.getElementById(s);
     el.classList.toggle("active", s === id);
   });
+  const titleActions = document.querySelector(".title-actions");
+  if (titleActions) {
+    titleActions.style.display = id === "title-screen" ? "flex" : "none";
+  }
 }
 
 function showTitle() {
