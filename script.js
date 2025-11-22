@@ -2,6 +2,11 @@
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+const uuid = () =>
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `id-${Math.random().toString(16).slice(2)}-${Date.now().toString(16)}`;
+
 const nameFragments = [
   "기",
   "르",
@@ -444,7 +449,7 @@ function rollKeywords() {
 function createVanguard(stage, guaranteedKeyword) {
   const base = 10 + Math.ceil(stage * 0.8);
   const unit = {
-    id: crypto.randomUUID(),
+    id: uuid(),
     name: randomName("ally"),
     tribes: randomTribe(),
     range: rand(1, 3),
@@ -468,7 +473,7 @@ function createVanguard(stage, guaranteedKeyword) {
 
 function createTactic() {
   const base = tacticCards[rand(0, tacticCards.length - 1)];
-  return { ...base, id: crypto.randomUUID(), type: "tactic" };
+  return { ...base, id: uuid(), type: "tactic" };
 }
 
 function getTacticCost(card) {
@@ -521,6 +526,7 @@ function renderShop() {
   $("#shop-money").textContent = `$${state.money}`;
   renderCards($("#shop-cards"), state.shopCards, (card) => buyCard(card), {
     disabledIds: state.shopTaken,
+    clickAny: true,
   });
   const closeBtn = $("#close-shop");
   const pickedVanguard = state.shopCards.some((c) => state.shopTaken.has(c.id) && c.type === "vanguard");
@@ -575,6 +581,8 @@ function renderCards(container, cards, onClick, options = {}) {
     selectable = false,
     selectedId = null,
     disabledIds = new Set(),
+    clickAny = false,
+    tacticOnlyClick = false,
   } = options;
   container.innerHTML = "";
   cards.forEach((card) => {
@@ -582,13 +590,31 @@ function renderCards(container, cards, onClick, options = {}) {
     const selected = selectedId && display.id === selectedId;
     const disabled = disabledIds.has(display.id);
     container.appendChild(
-      renderCard(display, () => onClick?.(card), { compact, draggable, showCost, selectable, selected, disabled })
+      renderCard(display, () => onClick?.(card), {
+        compact,
+        draggable,
+        showCost,
+        selectable,
+        selected,
+        disabled,
+        clickAny,
+        tacticOnlyClick,
+      })
     );
   });
 }
 
 function renderCard(card, onClick, options = {}) {
-  const { compact = false, draggable = false, showCost = true, selectable = false, selected = false, disabled = false } = options;
+  const {
+    compact = false,
+    draggable = false,
+    showCost = true,
+    selectable = false,
+    selected = false,
+    disabled = false,
+    clickAny = false,
+    tacticOnlyClick = false,
+  } = options;
   const el = document.createElement("article");
   el.className = `card ${compact ? "mini" : ""} ${selected ? "rest-selected" : ""} ${disabled ? "disabled" : ""}`;
   const shownCost = card.type === "tactic" ? getTacticCost(card) : card.cost;
@@ -617,7 +643,9 @@ function renderCard(card, onClick, options = {}) {
       onClick?.(card);
       return;
     }
-    if (card.type === "tactic") onClick?.(card);
+    if (!onClick) return;
+    if (tacticOnlyClick && card.type !== "tactic") return;
+    if (clickAny || card.type === "tactic" || selectable) onClick(card);
   });
 
   el.addEventListener("pointerdown", (e) => {
@@ -851,7 +879,7 @@ function renderGate() {
       if (card.type === "tactic") return playTactic(card);
       return null;
     },
-    { draggable: true }
+    { draggable: true, tacticOnlyClick: true }
   );
 }
 
@@ -1100,7 +1128,7 @@ function closeShopLayer() {
 function placeFromGate(card, targetIdx = null) {
   const emptyIndex = targetIdx != null ? targetIdx : state.board.findIndex((c) => !c);
   if (emptyIndex === -1 || state.board[emptyIndex]) return;
-  state.board[emptyIndex] = { ...card, id: crypto.randomUUID() };
+  state.board[emptyIndex] = { ...card, id: uuid() };
   state.gate = state.gate.filter((c) => c.id !== card.id);
   refreshTargets();
   render();
@@ -1192,14 +1220,14 @@ function applyKeywordToCard(keyword, card) {
 }
 
 function spawnEntity() {
-  const base = 8 + Math.ceil(state.stage * 1.1);
+  const base = 10 + Math.ceil(state.stage * 1.4);
   const isBoss = state.stageInCycle === 4;
-  const hp = isBoss ? base * 2.2 : base;
-  const atk = isBoss ? base * 1.6 : base * 0.9;
-  const satk = isBoss ? base * 1.6 : base * 0.9;
-  const def = isBoss ? base * 1.2 : base * 0.8;
+  const hp = isBoss ? base * 4.5 : base * 3.2;
+  const atk = isBoss ? base * 0.9 : base * 0.65;
+  const satk = isBoss ? base * 0.9 : base * 0.65;
+  const def = isBoss ? base * 0.7 : base * 0.55;
   const sdef = def;
-  const threat = isBoss ? 3 + rand(1, 3) : 1 + rand(0, 2);
+  const threat = isBoss ? 3 + rand(0, 2) : 1 + rand(0, 1);
   state.entity = {
     name: isBoss && state.stage === 20 ? "아키리히치" : randomName("enemy"),
     boss: isBoss,
