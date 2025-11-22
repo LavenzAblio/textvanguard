@@ -986,14 +986,75 @@ function renderEntityPanel() {
 
 function pickTargets() {
   if (!state.entity) return [];
-  const occupied = state.board.map((u, idx) => (u ? idx : null)).filter((v) => v != null);
-  if (occupied.length === 0) return [];
+
+  const totalCells = 9;
+  const max = Math.min(state.entity.threat, totalCells);
+
+  // 보드 상태 스냅샷
+  const board = state.board;
+
+  const frontIndexes = [0, 1, 2];
+  const otherIndexes = [3, 4, 5, 6, 7, 8];
+
+  // 4가지 그룹
+  let frontWithUnit = frontIndexes.filter((i) => board[i]);
+  let otherWithUnit = otherIndexes.filter((i) => board[i]);
+  let frontEmpty = frontIndexes.filter((i) => !board[i]);
+  let otherEmpty = otherIndexes.filter((i) => !board[i]);
+
   const result = [];
-  const max = Math.min(state.entity.threat, occupied.length);
-  while (result.length < max) {
-    const t = occupied[rand(0, occupied.length - 1)];
-    if (!result.includes(t)) result.push(t);
+
+  // 그룹별 기본 가중치
+  const baseWeights = {
+    frontWithUnit: 50, // 전방 + 유닛: 가장 우선
+    otherWithUnit: 25, // 후방 + 유닛
+    frontEmpty: 15, // 전방 빈 칸
+    otherEmpty: 10, // 후방 빈 칸
+  };
+
+  while (
+    result.length < max &&
+    (frontWithUnit.length || otherWithUnit.length || frontEmpty.length || otherEmpty.length)
+  ) {
+    // 현재 남아 있는 그룹만으로 가중치 재계산
+    const groups = [];
+    if (frontWithUnit.length) groups.push("frontWithUnit");
+    if (otherWithUnit.length) groups.push("otherWithUnit");
+    if (frontEmpty.length) groups.push("frontEmpty");
+    if (otherEmpty.length) groups.push("otherEmpty");
+
+    const totalWeight = groups.reduce((sum, key) => sum + baseWeights[key], 0);
+    let r = Math.random() * totalWeight;
+    let chosenGroup = groups[0];
+
+    for (const key of groups) {
+      if (r < baseWeights[key]) {
+        chosenGroup = key;
+        break;
+      }
+      r -= baseWeights[key];
+    }
+
+    let pool;
+    if (chosenGroup === "frontWithUnit") pool = frontWithUnit;
+    else if (chosenGroup === "otherWithUnit") pool = otherWithUnit;
+    else if (chosenGroup === "frontEmpty") pool = frontEmpty;
+    else pool = otherEmpty;
+
+    const idxInPool = rand(0, pool.length - 1);
+    const cellIndex = pool[idxInPool];
+
+    if (!result.includes(cellIndex)) {
+      result.push(cellIndex);
+
+      // 선택된 칸은 모든 그룹에서 제거
+      frontWithUnit = frontWithUnit.filter((i) => i !== cellIndex);
+      otherWithUnit = otherWithUnit.filter((i) => i !== cellIndex);
+      frontEmpty = frontEmpty.filter((i) => i !== cellIndex);
+      otherEmpty = otherEmpty.filter((i) => i !== cellIndex);
+    }
   }
+
   return result;
 }
 
@@ -1201,7 +1262,6 @@ function placeFromGate(card, targetIdx = null) {
   if (emptyIndex === -1 || state.board[emptyIndex]) return;
   state.board[emptyIndex] = { ...card, id: uuid() };
   state.gate = state.gate.filter((c) => c.id !== card.id);
-  refreshTargets();
   render();
 }
 
@@ -1247,7 +1307,6 @@ function moveUnitTo(fromIdx, targetIdx) {
   const temp = state.board[targetIdx];
   state.board[targetIdx] = state.board[fromIdx];
   state.board[fromIdx] = temp || null;
-  refreshTargets();
   render();
 }
 
@@ -1374,7 +1433,6 @@ function handleDeath(idx, unit) {
   }
   state.board[idx] = null;
   showCellEffect(idx, "퇴각");
-  refreshTargets();
 }
 
 function endTurn() {

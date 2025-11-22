@@ -39,7 +39,7 @@ main#app {
   padding: 24px;
   display: flex;
   align-items: stretch;
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
 }
 
@@ -187,11 +187,14 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 .title-text h1 { font-size: 3.4rem; }
 
-.game-shell { display: flex; flex-direction: column; gap: 16px; height: 100%; }
 .game-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
   width: 100%;
-  max-width: 1500px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   padding: 0 28px;
 }
 .top-band {
