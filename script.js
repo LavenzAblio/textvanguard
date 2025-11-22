@@ -558,8 +558,11 @@ function renderShop() {
   });
   const closeBtn = $("#close-shop");
   const pickedVanguardCount = state.shopCards.filter((c) => state.shopTaken.has(c.id) && c.type === "vanguard").length;
-  const ownsVanguard = state.gate.some((c) => c.type === "vanguard") || state.board.some((c) => c);
-  const canLeave = pickedVanguardCount > 0 || ownsVanguard;
+  const ownsVanguard =
+    pickedVanguardCount > 0 ||
+    state.gate.some((c) => c.type === "vanguard") ||
+    state.board.some((c) => c && c.type === "vanguard");
+  const canLeave = ownsVanguard;
   if (closeBtn) {
     closeBtn.disabled = !canLeave;
   }
@@ -1163,7 +1166,9 @@ function reroll() {
 function closeShopLayer() {
   const pickedVanguardCount = state.shopCards.filter((c) => state.shopTaken.has(c.id) && c.type === "vanguard").length;
   const ownsVanguard =
-    pickedVanguardCount > 0 || state.gate.some((c) => c.type === "vanguard") || state.board.some((c) => c);
+    pickedVanguardCount > 0 ||
+    state.gate.some((c) => c.type === "vanguard") ||
+    state.board.some((c) => c && c.type === "vanguard");
 
   if (state.initialVanguardNeeded && !ownsVanguard) {
     const cheapest = state.shopCards
@@ -1181,7 +1186,6 @@ function closeShopLayer() {
     state.initialVanguardNeeded = false;
     state.shopPicked = true;
   }
-  if (state.pendingSpawn && !state.shopPicked) return;
 
   $("#shop-layer").classList.add("hidden");
   if (state.pendingSpawn && !state.restStage) {
