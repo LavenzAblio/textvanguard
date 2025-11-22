@@ -451,6 +451,7 @@ function createVanguard(stage, guaranteedKeyword) {
   const base = Math.ceil((16 + stage * 1.7) * variance);
   const unit = {
     id: uuid(),
+    type: "vanguard",
     name: randomName("ally"),
     tribes: randomTribe(),
     range: rand(1, 3),

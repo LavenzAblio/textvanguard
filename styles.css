@@ -130,13 +130,14 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   z-index: 50;
 }
 .title-buttons {
-  position: absolute;
+  position: fixed;
   right: 28px;
   bottom: 28px;
   display: grid;
   gap: 18px;
   width: 260px;
   justify-items: stretch;
+  z-index: 50;
 }
 #record-screen.panel {
   display: flex;
