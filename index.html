@@ -8,20 +8,33 @@
 </head>
 <body>
   <main id="app">
-    <section id="title-screen" class="panel">
-      <h1>텍스트 뱅가드</h1>
-      <p class="subtitle">3x3 전장에서 뱅가드를 지휘하는 로그라이크 덱빌딩</p>
-      <div class="button-row">
-        <button id="story-btn" class="primary">스토리 모드</button>
-        <button id="endless-btn" class="primary">무한 모드</button>
-      </div>
-      <div class="button-row">
-        <button id="record-btn">무한 모드 기록</button>
-        <button id="option-btn">옵션</button>
+    <section id="title-screen" class="panel screen active">
+      <div class="hero">
+        <div>
+          <p class="eyebrow">전략 덱빌딩 · 자동 전투</p>
+          <h1>텍스트 뱅가드</h1>
+          <p class="subtitle">3x3 전장에서 뱅가드를 지휘하고 계약을 체결하세요.</p>
+          <div class="button-row">
+            <button id="story-btn" class="primary">스토리 모드</button>
+            <button id="endless-btn" class="primary">무한 모드</button>
+          </div>
+          <div class="button-row">
+            <button id="record-btn">무한 모드 기록</button>
+            <button id="option-btn">옵션</button>
+          </div>
+        </div>
+        <div class="hero-card">
+          <h3>게임 흐름</h3>
+          <ul>
+            <li>소환으로 첫 뱅가드 확보</li>
+            <li>일반 ×3 → 보스 ×1 반복, 두 번마다 재정비</li>
+            <li>보스 스테이지마다 계약 1개 선택</li>
+          </ul>
+        </div>
       </div>
     </section>
 
-    <section id="record-screen" class="panel hidden">
+    <section id="record-screen" class="panel screen">
       <header class="panel-header">
         <h2>무한 모드 기록</h2>
         <button data-action="to-title">메인 타이틀로</button>
@@ -29,9 +42,9 @@
       <ol id="record-list" class="scroll"></ol>
     </section>
 
-    <section id="game-screen" class="panel hidden">
+    <section id="game-screen" class="panel screen">
       <header class="panel-header">
-        <div>
+        <div class="pill-row">
           <strong id="mode-label"></strong>
           <span id="stage-label" class="pill"></span>
           <span id="cycle-label" class="pill"></span>
@@ -41,7 +54,6 @@
           <button id="summon-btn" class="primary">소환</button>
           <button id="reroll-btn">재소환</button>
           <button id="end-turn-btn" class="accent">턴 종료</button>
-          <button data-action="sacrifice" title="배치한 뱅가드를 클릭해 희생">희생 모드</button>
           <button data-action="to-title">항복</button>
         </div>
       </header>
@@ -63,10 +75,6 @@
           <div class="card-slot">
             <h3>키워드 부여 카드</h3>
             <div id="keyword-cards" class="card-list scroll"></div>
-          </div>
-          <div class="card-slot">
-            <h3>로그</h3>
-            <pre id="log" class="log scroll"></pre>
           </div>
         </aside>
       </div>

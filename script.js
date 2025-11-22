@@ -121,7 +121,6 @@ const state = {
   turnBuff: { damage: 0, crit: 0, shieldFront: false },
   stageBuff: { damage: 0 },
   entity: null,
-  sacrificeMode: false,
   contractEffects: {
     allyDamage: 0,
     allyCrit: 0,
@@ -134,6 +133,8 @@ const state = {
     rerollFlat: 0,
   },
 };
+
+let activeSacrificeButton = null;
 
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -337,7 +338,6 @@ function renderCard(card, onClick) {
 
 function log(msg) {
   state.log.unshift(msg);
-  $("#log").textContent = state.log.slice(0, 60).join("\n");
 }
 
 function resetState(mode) {
@@ -358,7 +358,6 @@ function resetState(mode) {
     rerollCost: 5,
     log: [],
     entity: null,
-    sacrificeMode: false,
     turnBuff: { damage: 0, crit: 0, shieldFront: false },
     stageBuff: { damage: 0 },
     contractEffects: {
@@ -388,7 +387,8 @@ function renderBoard() {
     cell.innerHTML = unit
       ? `<div><strong>${unit.name}</strong><div class="muted">${unit.hp}/${unit.maxHp}</div></div><span class="tag">${unit.role}</span>`
       : "<span class=\"muted\">빈 칸</span>";
-    cell.addEventListener("click", () => onCellClick(idx));
+    cell.addEventListener("click", (e) => onCellClick(e, cell, idx));
+    cell.addEventListener("dblclick", () => moveUnit(idx));
     boardEl.appendChild(cell);
   });
 }
@@ -459,19 +459,38 @@ function placeFromGate(card) {
   render();
 }
 
-function onCellClick(idx) {
+function clearSacrificeButton() {
+  if (activeSacrificeButton?.parentElement) {
+    activeSacrificeButton.parentElement.removeChild(activeSacrificeButton);
+  }
+  activeSacrificeButton = null;
+}
+
+function sacrificeUnit(idx, unit) {
+  const refund = Math.ceil(unit.cost * 0.3);
+  state.money += refund;
+  state.board[idx] = null;
+  log(`${unit.name} 희생, $${refund} 환급.`);
+  clearSacrificeButton();
+  render();
+}
+
+function onCellClick(event, cell, idx) {
   const unit = state.board[idx];
-  if (state.sacrificeMode && unit) {
-    const refund = Math.ceil(unit.cost * 0.3);
-    state.money += refund;
-    state.board[idx] = null;
-    log(`${unit.name} 희생, $${refund} 환급.`);
-    render();
+  if (!unit) {
+    clearSacrificeButton();
     return;
   }
-  if (unit) {
-    moveUnit(idx);
-  }
+  clearSacrificeButton();
+  const btn = document.createElement("button");
+  btn.className = "sacrifice-btn";
+  btn.textContent = "희생";
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    sacrificeUnit(idx, unit);
+  });
+  cell.appendChild(btn);
+  activeSacrificeButton = btn;
 }
 
 function moveUnit(idx) {
@@ -720,33 +739,36 @@ function updateRecords() {
     });
 }
 
+function activateScreen(id) {
+  $$(".screen").forEach((p) => {
+    p.classList.toggle("active", p.id === id);
+  });
+}
+
 function showTitle() {
-  $$(".panel").forEach((p) => p.classList.add("hidden"));
+  activateScreen("title-screen");
   $("#contract-screen").classList.add("hidden");
   $("#shop").classList.add("hidden");
-  $("#title-screen").classList.remove("hidden");
+  clearSacrificeButton();
 }
 
 $("#story-btn").addEventListener("click", () => {
   resetState("스토리 모드");
   spawnEntity();
   $("#mode-label").textContent = "스토리 모드";
-  $("#title-screen").classList.add("hidden");
-  $("#game-screen").classList.remove("hidden");
+  activateScreen("game-screen");
 });
 
 $("#endless-btn").addEventListener("click", () => {
   resetState("무한 모드");
   spawnEntity();
   $("#mode-label").textContent = "무한 모드";
-  $("#title-screen").classList.add("hidden");
-  $("#game-screen").classList.remove("hidden");
+  activateScreen("game-screen");
 });
 
 $("#record-btn").addEventListener("click", () => {
   updateRecords();
-  $$(".panel").forEach((p) => p.classList.add("hidden"));
-  $("#record-screen").classList.remove("hidden");
+  activateScreen("record-screen");
 });
 
 $$('[data-action="to-title"]').forEach((btn) => btn.addEventListener("click", showTitle));
@@ -754,15 +776,19 @@ $("#summon-btn").addEventListener("click", () => summon(true));
 $("#reroll-btn").addEventListener("click", reroll);
 $("#close-shop").addEventListener("click", () => $("#shop").classList.add("hidden"));
 $("#end-turn-btn").addEventListener("click", endTurn);
-$("[data-action='sacrifice']").addEventListener("click", () => {
-  state.sacrificeMode = !state.sacrificeMode;
-  log(state.sacrificeMode ? "희생 모드 활성화" : "희생 모드 종료");
-});
 $("#skip-contract").addEventListener("click", () => {
   log("계약을 건너뜀");
   closeContractModal();
   advanceStage();
   render();
+});
+
+document.addEventListener("click", (e) => {
+  if (!activeSacrificeButton) return;
+  const inCell = e.target.closest?.(".cell");
+  if (!inCell || inCell !== activeSacrificeButton.parentElement) {
+    clearSacrificeButton();
+  }
 });
 
 renderBoard();
