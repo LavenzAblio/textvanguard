@@ -362,8 +362,10 @@ const state = {
   contractChoices: [],
   shopCards: [],
   rerollCost: 5,
-  log: [],
   records: [],
+  initialVanguardNeeded: true,
+  shopPicked: false,
+  shopTaken: new Set(),
   turnBuff: { damage: 0, crit: 0, shieldFront: false },
   stageBuff: { damage: 0 },
   entity: null,
@@ -391,7 +393,7 @@ let dragOriginIdx = null;
 let dragAvatar = null;
 let turnTimerId = null;
 let turnTimerRemaining = 0;
-const TURN_TIME = 28;
+const TURN_TIME = 45;
 
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -401,9 +403,9 @@ function randomName(type = "ally") {
   const len =
     type === "enemy"
       ? rand(3, 5)
-      : Math.random() < 0.65
-      ? rand(2, 2)
-      : rand(2, 3);
+      : Math.random() < 0.75
+      ? 2
+      : rand(1, 2);
   let name = "";
   for (let i = 0; i < len; i++) name += nameFragments[rand(0, nameFragments.length - 1)];
   return name.slice(0, 7);
@@ -506,15 +508,25 @@ function createShopCards(forceVanguard = false) {
     }
   }
   const adjusted = cards.map((card) => applyShopCost(card));
-  return adjusted.filter((card) => (card.type === "tactic" ? true : card.cost <= state.money * 1.5));
+  let filtered = adjusted.filter((card) => (card.type === "tactic" ? true : card.cost <= state.money * 1.5));
+  if (forceVanguard && filtered.every((c) => c.type !== "vanguard")) {
+    return createShopCards(forceVanguard);
+  }
+  if (filtered.length === 0) filtered = adjusted;
+  return filtered;
 }
 
 function renderShop() {
   $("#shop-layer").classList.remove("hidden");
   $("#shop-money").textContent = `$${state.money}`;
-  const wrap = $("#shop-cards");
-  wrap.innerHTML = "";
-  state.shopCards.forEach((card) => wrap.appendChild(renderCard(card, () => buyCard(card))));
+  renderCards($("#shop-cards"), state.shopCards, (card) => buyCard(card), {
+    disabledIds: state.shopTaken,
+  });
+  const closeBtn = $("#close-shop");
+  const pickedVanguard = state.shopCards.some((c) => state.shopTaken.has(c.id) && c.type === "vanguard");
+  if (closeBtn) {
+    closeBtn.disabled = state.initialVanguardNeeded ? !pickedVanguard : !state.shopPicked;
+  }
 }
 
 function pickContracts() {
@@ -550,26 +562,35 @@ function closeContractModal() {
 function chooseContract(contract) {
   contract.apply(state);
   state.contracts.push(contract);
-  log(`계약 '${contract.name}' 체결: ${contract.buff} / ${contract.debuff}`);
   closeContractModal();
   advanceStage();
   render();
 }
 
 function renderCards(container, cards, onClick, options = {}) {
-  const { compact = false, draggable = false, showCost = true, selectable = false, selectedId = null } = options;
+  const {
+    compact = false,
+    draggable = false,
+    showCost = true,
+    selectable = false,
+    selectedId = null,
+    disabledIds = new Set(),
+  } = options;
   container.innerHTML = "";
   cards.forEach((card) => {
     const display = typeof card === "string" ? { id: card, name: card, type: "keyword", text: "키워드 부여" } : card;
     const selected = selectedId && display.id === selectedId;
-    container.appendChild(renderCard(display, () => onClick?.(card), { compact, draggable, showCost, selectable, selected }));
+    const disabled = disabledIds.has(display.id);
+    container.appendChild(
+      renderCard(display, () => onClick?.(card), { compact, draggable, showCost, selectable, selected, disabled })
+    );
   });
 }
 
 function renderCard(card, onClick, options = {}) {
-  const { compact = false, draggable = false, showCost = true, selectable = false, selected = false } = options;
+  const { compact = false, draggable = false, showCost = true, selectable = false, selected = false, disabled = false } = options;
   const el = document.createElement("article");
-  el.className = `card ${compact ? "mini" : ""} ${selected ? "rest-selected" : ""}`;
+  el.className = `card ${compact ? "mini" : ""} ${selected ? "rest-selected" : ""} ${disabled ? "disabled" : ""}`;
   const shownCost = card.type === "tactic" ? getTacticCost(card) : card.cost;
   const label = card.type === "tactic" ? "택틱" : card.type === "keyword" ? "키워드" : `${card.role} · 사거리 ${card.range}`;
 
@@ -591,6 +612,7 @@ function renderCard(card, onClick, options = {}) {
 
   el.addEventListener("click", (e) => {
     e.stopPropagation();
+    if (disabled) return;
     if (selectable) {
       onClick?.(card);
       return;
@@ -599,7 +621,7 @@ function renderCard(card, onClick, options = {}) {
   });
 
   el.addEventListener("pointerdown", (e) => {
-    if (card.type === "tactic" || !draggable) return;
+    if (card.type === "tactic" || !draggable || disabled) return;
     e.preventDefault();
     startCardDrag(card);
   });
@@ -631,7 +653,23 @@ function isAdjacent(a, b) {
 function getDropIndex(event) {
   const target = document.elementFromPoint(event.clientX, event.clientY);
   const cell = target?.closest?.(".cell");
-  return cell ? Number(cell.dataset.idx) : null;
+  if (cell) return Number(cell.dataset.idx);
+  const board = $("#board");
+  if (!board) return null;
+  let closest = null;
+  let minDist = Infinity;
+  board.querySelectorAll(".cell").forEach((c) => {
+    const rect = c.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.hypot(cx - event.clientX, cy - event.clientY);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = c;
+    }
+  });
+  if (minDist < 90 && closest) return Number(closest.dataset.idx);
+  return null;
 }
 
 function handlePointerMove(e) {
@@ -684,10 +722,6 @@ function startUnitDrag(idx) {
   document.addEventListener("pointerup", handlePointerUp);
 }
 
-function log(msg) {
-  state.log.unshift(msg);
-}
-
 function resetState(mode) {
   Object.assign(state, {
     mode,
@@ -701,9 +735,11 @@ function resetState(mode) {
     keywordCards: [],
     contracts: [],
     contractChoices: [],
-    shopCards: createShopCards(true),
+    shopCards: [],
+    shopTaken: new Set(),
+    shopPicked: false,
+    initialVanguardNeeded: true,
     rerollCost: 5,
-    log: [],
     entity: null,
     currentTargets: [],
     nextTargets: [],
@@ -724,7 +760,6 @@ function resetState(mode) {
       rerollFlat: 0,
     },
   });
-  log(`${mode} 시작! 소환으로 첫 뱅가드를 확보하세요.`);
   summon(true);
   render();
 }
@@ -769,7 +804,6 @@ function render() {
     typeEl.textContent = "일반";
   }
 
-  renderStageTrack();
   renderBoard();
   renderGate();
   renderContracts();
@@ -809,25 +843,6 @@ function hideInspect() {
   if (panel) panel.classList.add("hidden");
 }
 
-function renderStageTrack() {
-  const wrap = $("#stage-track");
-  if (!wrap) return;
-  wrap.innerHTML = "";
-  const nodes = [1, 2, 3, 4];
-  nodes.forEach((n) => {
-    const node = document.createElement("div");
-    node.className = "stage-node";
-    if (n === 4) node.classList.add("boss");
-    if (n === state.stageInCycle) node.classList.add("active");
-    wrap.appendChild(node);
-  });
-  if (state.restStage) {
-    const rest = document.createElement("div");
-    rest.className = "stage-node rest active";
-    wrap.appendChild(rest);
-  }
-}
-
 function renderGate() {
   renderCards(
     $("#gate"),
@@ -842,6 +857,8 @@ function renderGate() {
 
 function renderEntityPanel() {
   const portrait = $("#entity-portrait");
+  const info = $("#entity-info");
+  const inline = $("#entity-inline");
   if (!portrait) return;
   portrait.innerHTML = "";
   if (!state.entity) {
@@ -850,6 +867,8 @@ function renderEntityPanel() {
     empty.className = "placeholder";
     empty.textContent = "엔티티 없음";
     portrait.appendChild(empty);
+    if (info) info.innerHTML = `<div class="muted">엔티티 없음</div>`;
+    if (inline) inline.innerHTML = "";
     return;
   }
   portrait.classList.remove("empty");
@@ -861,6 +880,35 @@ function renderEntityPanel() {
   meta.innerHTML = `HP ${state.entity.hp}/${state.entity.maxHp}<br/>위협력 ${state.entity.threat}`;
   portrait.appendChild(circle);
   portrait.appendChild(meta);
+
+  const keywordHtml = (state.entity.keywords || []).map((k) => `<span class="keyword">${k}</span>`).join("");
+  if (info) {
+    info.innerHTML = `
+      <div class="entity-name">${state.entity.name}</div>
+      <div class="stat-grid">
+        <div class="stat-chip">체력 ${state.entity.hp}/${state.entity.maxHp}</div>
+        <div class="stat-chip">위협력 ${state.entity.threat}</div>
+        <div class="stat-chip">물공 ${state.entity.atk}</div>
+        <div class="stat-chip">특공 ${state.entity.satk}</div>
+        <div class="stat-chip">물방 ${state.entity.def}</div>
+        <div class="stat-chip">특방 ${state.entity.sdef}</div>
+      </div>
+      <div class="keywords">${keywordHtml || '<span class="muted">키워드 없음</span>'}</div>
+    `;
+  }
+  if (inline) {
+    inline.innerHTML = `
+      <div class="name">${state.entity.name}</div>
+      <div class="stats">
+        <span class="stat-chip">HP ${state.entity.hp}/${state.entity.maxHp}</span>
+        <span class="stat-chip">위협력 ${state.entity.threat}</span>
+        <span class="stat-chip">물공 ${state.entity.atk}</span>
+        <span class="stat-chip">특공 ${state.entity.satk}</span>
+        <span class="stat-chip">물방 ${state.entity.def}</span>
+        <span class="stat-chip">특방 ${state.entity.sdef}</span>
+      </div>
+    `;
+  }
 }
 
 function pickTargets() {
@@ -1005,16 +1053,21 @@ function finishRestStage() {
 }
 
 function buyCard(card) {
+  if (state.shopTaken.has(card.id)) return;
   if (state.money < card.cost) return;
   state.money -= card.cost;
   state.gate.push(card);
-  state.shopCards = state.shopCards.filter((c) => c.id !== card.id);
-  log(`${card.name}을(를) 구매했습니다.`);
+  state.shopTaken.add(card.id);
+  state.shopPicked = true;
+  if (state.initialVanguardNeeded && card.type === "vanguard") state.initialVanguardNeeded = false;
+  renderShop();
   render();
 }
 
 function summon(forceVanguard = false) {
   state.shopCards = createShopCards(forceVanguard);
+  state.shopTaken = new Set();
+  state.shopPicked = false;
   state.pendingSpawn = true;
   renderShop();
 }
@@ -1025,11 +1078,17 @@ function reroll() {
   state.money -= cost;
   state.rerollCost = Math.ceil(state.rerollCost * 1.25 + 1);
   summon();
-  log(`재소환! 새로운 카드 6장 등장. 비용은 이제 $${getRerollCost()}`);
   render();
 }
 
 function closeShopLayer() {
+  const pickedVanguard = state.shopCards.some((c) => state.shopTaken.has(c.id) && c.type === "vanguard");
+  if (state.initialVanguardNeeded && !pickedVanguard) {
+    return;
+  }
+  if (state.pendingSpawn && !state.shopPicked) {
+    return;
+  }
   $("#shop-layer").classList.add("hidden");
   if (state.pendingSpawn && !state.restStage) {
     spawnEntity();
@@ -1043,7 +1102,6 @@ function placeFromGate(card, targetIdx = null) {
   if (emptyIndex === -1 || state.board[emptyIndex]) return;
   state.board[emptyIndex] = { ...card, id: crypto.randomUUID() };
   state.gate = state.gate.filter((c) => c.id !== card.id);
-  log(`${card.name}을(를) 전장에 배치했습니다.`);
   refreshTargets();
   render();
 }
@@ -1059,7 +1117,6 @@ function sacrificeUnit(idx, unit) {
   const refund = Math.ceil(unit.cost * 0.3);
   state.money += refund;
   state.board[idx] = null;
-  log(`${unit.name} 희생, $${refund} 환급.`);
   clearSacrificeButton();
   render();
 }
@@ -1091,7 +1148,6 @@ function moveUnitTo(fromIdx, targetIdx) {
   const temp = state.board[targetIdx];
   state.board[targetIdx] = state.board[fromIdx];
   state.board[fromIdx] = temp || null;
-  log(`뱅가드를 이동했습니다. 비용 $${cost}`);
   refreshTargets();
   render();
 }
@@ -1102,7 +1158,6 @@ function playTactic(card) {
   state.money -= cost;
   card.effect(state);
   state.gate = state.gate.filter((c) => c.id !== card.id);
-  log(`택틱 ${card.name} 사용.`);
   render();
 }
 
@@ -1111,7 +1166,6 @@ function healOne(stateRef, ratio) {
   if (!unit) return;
   const heal = Math.ceil(unit.maxHp * ratio);
   unit.hp = Math.min(unit.maxHp, unit.hp + heal);
-  log(`${unit.name}이(가) ${heal}만큼 회복.`);
   const idx = stateRef.board.findIndex((u) => u === unit);
   if (idx >= 0) showCellEffect(idx, `+${heal}`, "heal");
 }
@@ -1120,14 +1174,12 @@ function buffOne(stateRef, dmg) {
   const unit = stateRef.board.find((u) => u);
   if (!unit) return;
   unit.tempBonus = (unit.tempBonus || 0) + dmg;
-  log(`${unit.name}에게 추가 피해 ${Math.round(dmg * 100)}% 부여.`);
 }
 
 function damageEntity(stateRef, ratio) {
   if (!stateRef.entity) return;
   const dmg = Math.ceil(stateRef.entity.hp * ratio);
   stateRef.entity.hp -= dmg;
-  log(`엔티티에게 ${dmg} 피해.`);
   showEntityEffect(`-${dmg}`);
   if (stateRef.entity.hp <= 0) onEntityDefeated();
 }
@@ -1137,7 +1189,6 @@ function applyKeywordToCard(keyword, card) {
   card.keywords = card.keywords || [];
   card.keywords.push(keyword);
   state.keywordCards = state.keywordCards.filter((k) => k !== keyword);
-  log(`${card.name}이(가) 키워드 ${keyword}를 획득.`);
 }
 
 function spawnEntity() {
@@ -1161,7 +1212,6 @@ function spawnEntity() {
     threat,
     keywords: rollKeywords(),
   };
-  log(`${state.entity.boss ? "보스" : "엔티티"} ${state.entity.name} 등장! 위협력 ${state.entity.threat}`);
   state.currentTargets = pickTargets();
   state.nextTargets = pickTargets();
   state.pendingSpawn = false;
@@ -1195,7 +1245,6 @@ function entityAttack() {
     const unit = state.board[idx];
     if (!unit) return;
     if (state.turnBuff.shieldFront && idx < 3) {
-      log(`최전방 보호막으로 ${unit.name} 피해 무시`);
       return;
     }
     const phys = Math.max(0, state.entity.atk - unit.def);
@@ -1203,7 +1252,6 @@ function entityAttack() {
     let dmg = Math.ceil(phys + mag);
     dmg = Math.max(0, Math.ceil(dmg * Math.max(0, 1 + state.contractEffects.enemyDamageTaken)));
     unit.hp -= dmg;
-    log(`${state.entity.name}이(가) ${unit.name}에게 ${dmg} 피해.`);
     showCellEffect(idx, `피해량 ${dmg}`);
     if (unit.hp <= 0) handleDeath(idx, unit);
   });
@@ -1216,7 +1264,6 @@ function handleDeath(idx, unit) {
   if (unit.keywords.includes("끈질김") && !unit._usedGrit) {
     unit._usedGrit = true;
     unit.hp = 1;
-    log(`${unit.name}이(가) 끈질김으로 생존!`);
     return;
   }
   if (unit.keywords.includes("부활") && !unit._usedRevive) {
@@ -1224,10 +1271,8 @@ function handleDeath(idx, unit) {
     unit.hp = unit.maxHp;
     state.gate.push(unit);
     state.board[idx] = null;
-    log(`${unit.name}이(가) 부활하여 게이트로 돌아감.`);
     return;
   }
-  log(`${unit.name}이(가) 처치되었습니다.`);
   state.board[idx] = null;
   showCellEffect(idx, "퇴각");
   refreshTargets();
@@ -1241,7 +1286,6 @@ function endTurn() {
     if (!unit) return;
     const dmg = calculateDamage(unit, state.entity, idx);
     state.entity.hp -= dmg;
-    log(`${unit.name} -> ${state.entity.name}: ${dmg} 피해`);
     showEntityEffect(`-${dmg}`);
   });
 
@@ -1257,7 +1301,6 @@ function endTurn() {
     if (u.keywords.includes("회복술사")) {
       const heal = 4;
       u.hp = Math.min(u.maxHp, u.hp + heal);
-      log(`${u.name}이(가) 회복술사로 ${heal} 회복.`);
       const idx = state.board.findIndex((item) => item === u);
       if (idx >= 0) showCellEffect(idx, `+${heal}`, "heal");
     }
@@ -1272,13 +1315,11 @@ function onEntityDefeated() {
   const rewardBase = 6 + state.stage * (state.entity.boss ? 4 : 2);
   const reward = Math.ceil(rewardBase * state.contractEffects.rewardMult);
   state.money += reward;
-  log(`${state.entity.name} 격파! $${reward} 획득.`);
   showEntityEffect("격파");
   const dropChance = state.entity.boss ? 1 : 0.25;
   if (Math.random() < dropChance) {
     const card = keywordCardsPool[rand(0, keywordCardsPool.length - 1)];
     state.keywordCards.push(card);
-    log(`키워드 부여 카드 획득: ${card}`);
   }
   const wasBoss = state.entity.boss;
   state.entity = null;
@@ -1315,7 +1356,6 @@ function advanceStage() {
 function checkGameOver() {
   const alive = state.board.some((u) => u);
   if (!alive) {
-    log("전장 전멸! 게임 종료");
     if (state.mode === "무한 모드") state.records.push({ stage: state.stage });
     showTitle();
   }
@@ -1358,6 +1398,9 @@ function showTitle() {
   state.selectedGateCard = null;
   state.currentTargets = [];
   state.nextTargets = [];
+  state.shopTaken = new Set();
+  state.shopPicked = false;
+  state.initialVanguardNeeded = true;
 }
 
 $("#story-btn").addEventListener("click", () => {
@@ -1380,7 +1423,6 @@ $("#overlay-reroll").addEventListener("click", reroll);
 $("#close-shop").addEventListener("click", closeShopLayer);
 $("#end-turn-btn").addEventListener("click", endTurn);
 $("#skip-contract").addEventListener("click", () => {
-  log("계약을 건너뜀");
   closeContractModal();
   advanceStage();
   render();

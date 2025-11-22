@@ -33,9 +33,25 @@
     <section id="game-screen" class="panel screen">
       <div class="game-shell">
         <div class="top-band">
+          <div class="stage-column">
+            <div class="stage-hub">
+              <div class="hub-label">현재 스테이지</div>
+              <div id="stage-circle" class="stage-circle">
+                <span id="stage-number">1</span>
+                <div id="stage-type" class="stage-type">일반</div>
+              </div>
+            </div>
+            <div class="contract-panel">
+              <h3>계약</h3>
+              <div id="active-contracts" class="chip-grid"></div>
+            </div>
+          </div>
           <div class="entity-column top-entity">
-            <div id="entity-portrait" class="entity-portrait empty">
-              <div class="placeholder">엔티티 없음</div>
+            <div class="entity-header">
+              <div id="entity-portrait" class="entity-portrait empty">
+                <div class="placeholder">엔티티 없음</div>
+              </div>
+              <div class="entity-info" id="entity-info"></div>
             </div>
             <div class="attack-preview">
               <div class="preview-label">이번 공격</div>
@@ -43,10 +59,6 @@
               <div class="preview-label next">다음 공격</div>
               <div id="attack-next" class="mini-grid"></div>
             </div>
-          </div>
-          <div class="contract-panel">
-            <h3>계약</h3>
-            <div id="active-contracts" class="chip-grid"></div>
           </div>
           <div class="gate-stack">
             <div class="gate-header">
@@ -61,18 +73,8 @@
         </div>
 
         <div class="play-row">
-          <div class="stage-column">
-            <div class="stage-hub">
-              <div class="hub-label">현재 스테이지</div>
-              <div id="stage-circle" class="stage-circle">
-                <span id="stage-number">1</span>
-                <div id="stage-type" class="stage-type">일반</div>
-              </div>
-              <div id="stage-track" class="stage-track"></div>
-            </div>
-          </div>
-
           <div class="board-column">
+            <div id="entity-inline" class="entity-inline"></div>
             <div class="board" aria-label="3x3 전장" id="board"></div>
             <div id="effect-layer" class="effect-layer"></div>
             <div class="board-controls">
@@ -100,11 +102,11 @@
       <div class="overlay-surface summon-surface">
         <header class="overlay-header">
           <h3>소환</h3>
-          <div class="overlay-meta">6장의 카드 중 선택 후 드래그해 가져가세요</div>
+          <div class="overlay-meta">카드를 클릭해 선택하세요</div>
         </header>
         <div id="shop-cards" class="shop-row"></div>
         <div class="overlay-actions">
-          <button id="close-shop">계속 진행</button>
+          <button id="close-shop">선택 완료</button>
           <button id="overlay-reroll" class="primary">재소환</button>
           <div class="money-box">현재 돈 <span id="shop-money">$0</span></div>
         </div>
